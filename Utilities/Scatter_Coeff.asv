@@ -1,0 +1,138 @@
+function [Scat_distrib] = Scatter_Coeff(SystemParam)
+%UNTITLED12 Summary of this function goes here
+%   Detailed explanation goes here
+ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nwater];
+nt_vec=ni_vec;
+st=0;
+last=pi/2;
+theta_vec=linspace(st,last,180.*SystemParam.ang_div);%every half angle is considered
+%think about including a system param to determine how the number of angles
+%considered is increased
+%to do, rename, cell of poss
+Scat_distrib=cell(length(ni_vec),length(nt_vec),length(theta_vec));
+for a=1:length(ni_vec)
+    ni=ni_vec(a);
+    for b=1:length(nt_vec)
+        nt=nt_vec(b);
+        if nt>=ni%if there isn't a critical angle
+            theta_c=pi/2;
+        else%if there is a critical angle
+            theta_c=asin(nt/ni);
+        end
+        Oh=pi/2-theta_c;%"horizontal" version of this angle
+        for c=1:length(theta_vec)
+            theta_i=theta_vec(c);
+            theta_h=((sign(theta_i)*pi/2)-theta_i);
+            %angles off of the initial horizontal direction of travel for
+            %the integral
+            theta_distrib=linspace(0,2*pi,10000);
+            %create distribution of the 1+cos2(theta)  intensity  off of
+            %the traveling vector
+            I_distrib=1+cos(theta_distrib).^2;
+            I_range=I_distrib./sum(I_distrib,'all');
+            %allocate empty vectors
+            I_forward=zeros(size(I_range));
+            I_backward=zeros(size(I_range));
+            I_sideup=zeros(size(I_range));
+            I_sidedown=zeros(size(I_range));
+            I_total=zeros(size(I_range));
+            %define the range of angle categoris for dif scatter directions
+            theta_Fup=Oh-theta_h;
+            theta_Fdown=(2*pi)-Oh-theta_h;
+            theta_Bup=pi-Oh-theta_h;
+            theta_Bdown=pi-theta_h+Oh;
+            countF=0;
+            countB=0;
+            countSU=0;
+            countSD=0;
+            for i=1:length(theta_distrib)
+                I_total(i)=I_range(i);
+                %if the angle is within the forward range
+                if theta_distrib(i)<=theta_Fup  || theta_distrib(i)>theta_Fdown
+                    %assign to the forward range
+                    I_forward(i)=I_range(i);
+                    countF=countF+1;
+                %if the angle is within the backward range
+                elseif theta_distrib(i)>theta_Bup && theta_distrib(i)<=theta_Bdown
+                     %assign to the backward range
+                    I_backward(i)=I_range(i);
+                    countB=countB+1;
+                %if the angle is within the upper side range
+                elseif theta_distrib(i)>theta_Fup && theta_distrib(i)<=theta_Bup
+                    I_sideup=I_range(i);
+                    countSU=countSU+1;
+                %if the angle is within the lower side range
+                elseif theta_distrib(i)>theta_Fup && theta_distrib(i)<=theta_Bup
+                    I_sidedown=I_range(i);
+                    countSD=countSD+1;
+                else
+%                     disp('current theta')
+%                     disp(theta_distrib(i))
+%                     disp('Oc')
+%                     disp(theta_c)
+%                     disp(Oh)
+%                     disp('theta_bounds')
+%                     disp(theta_Fup)
+%                     disp(theta_Fdown)
+%                     disp(theta_Bup)
+%                     disp(theta_Bdown)
+%                     disp('I')
+%                     disp(I_range(i))
+                    error('unallocated I_range')
+                end
+            end
+            %ratio to the total of each
+            Sideup=sum(I_sideup)./sum(I_total);
+            Sidedown=sum(I_sidedown)./sum(I_total);
+            Forward=sum(I_forward)./sum(I_total);
+            Backward=sum(I_backward)./sum(I_total);
+            scat_total=Sideup+Sidedown+Forward+Backward;
+            Rayloss=Sideup+Sidedown+Backward;%total "loss" considered by the rayleigh coeff
+
+            if abs(scat_total-1)>SystemParam.dif_tol
+%                 disp('sum(I_distrib)')
+%                 disp(sum(I_distrib))
+%                 disp('sum(I_range)')
+%                 disp(sum(I_range))
+%                 disp('sum(I_total)')
+%                 disp(sum(I_total))
+%                 disp('sum(I_forward)')
+%                 disp(sum(I_forward))
+%                 disp('sum(I_backward)')
+%                 disp(sum(I_backward))
+%                 disp('sum(I_sideup)')
+%                 disp(sum(I_sideup))
+%                 disp('sum(I_sidedown)')
+%                 disp(sum(I_sidedown))
+%                 
+%                 disp('Forward)')
+%                 disp(Forward)
+%                 disp('Backward')
+%                 disp(Backward)
+%                 disp('Sideup')
+%                 disp(Sideup)
+%                 disp('Sidedown')
+%                 disp(Sidedown)
+%                 disp('scat_total')
+%                 disp(scat_total)
+%                 disp('Rayloss')
+%                 disp(Rayloss)
+%                 disp('num vec')
+%                 disp(i)
+%                 disp('counts')
+%                 disp(countF)
+%                 disp(countB)
+%                 disp(countSU)
+%                 disp(countSD)
+                error('coefficients dont add to 100%')
+
+            end
+            
+            %to do, fill the output with somthing appropriate
+            Scat_distrib(a,b,c)={[Forward,Backward,Sideup,Sidedown,Rayloss]};
+        end
+    end
+   
+end
+end
+
