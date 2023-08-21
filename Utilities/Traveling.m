@@ -11,11 +11,8 @@ IT.transi=0;
 IT.b2hi=0;
 IT.approxi=0;
 
-%current amount of light measured for checking if there's any glaring
-%differences in performance
 MEAS0=sum(meas.inten);
 Istart=I;
-
 SystemParam.SMA=1;%is there a SMA connector used to couple thhe fiber to the LED? 1 for yes, 0 for no
 SystemParam.SMA_flushlength=1*10^4;%the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
 SystemParam.SMA_totallength=2.5*10^4;%the total length of the SMA connector is 2.5 cm long
