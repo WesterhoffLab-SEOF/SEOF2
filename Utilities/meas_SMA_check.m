@@ -78,9 +78,8 @@ if ratYtoX==0 %if the transmitting ray is  entirely horizontl, not worried about
             [Tally,~,~]=inOutTrack(I_in,(sum(meas.inten)-Meas0),SystemParam,'horz ray w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
-elseif ratXtoY==0%10^-3 %if the transmitting ray is only vertical
+elseif ratXtoY<=0 %if the transmitting ray is only vertical
         Tally.photon_vert_count(iteration,h,aa)=Tally.photon_vert_count(iteration,h,aa)+1;%counter goes up
-        I_return=I_reflect;
     P_return=P;
 
         if P(1)<=SMAFL && P(1)>=0 %if it's within the flush length, lose the light
