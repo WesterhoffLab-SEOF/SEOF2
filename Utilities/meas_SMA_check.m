@@ -5,7 +5,7 @@ function[I_return,P_return,IT,Tally,meas]=meas_SMA_check(I_in,I_transmit,I_refle
 %include (update this to figure out how long to track a bouncing ray in a
 %coating
 %if it's in the right place
-Meas0=sum(meas.inten);House0=IT.housi;Absorb0=IT.absorbi;Back0=IT.backi;Cutoff0=IT.cutoffi;
+%%    Meas0=sum(meas.inten);House0=IT.housi;Absorb0=IT.absorbi;Back0=IT.backi;Cutoff0=IT.cutoffi;
 I_min=SystemParam.I_min;
 %check there is an SMA
 if SystemParam.SMA==0%if there isn't an sma connector then all transmitted light is measurable
@@ -15,15 +15,13 @@ if SystemParam.SMA==0%if there isn't an sma connector then all transmitted light
     meas.counter=meas.counter+1;%increase the counter position
     meas.sum=I_transmit+meas.sum;
     if meas.inten(meas.counter-1)==0
-        display(I_transmit)
-        display(meas.inten(meas.counter-1))
         error('measuring 0')
     end
     %set up for returning to the traveling function
     P_return=P;
     I_return=I_reflect;
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten))],SystemParam,'No SMA w/in meas_SMA_check',1,Global_Index,Tally);
-      [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'No SMA w/in meas_SMA_check',1,Global_Index,Tally);
+%%     [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten))],SystemParam,'No SMA w/in meas_SMA_check',1,Global_Index,Tally);
+%%     [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'No SMA w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 end
@@ -48,22 +46,17 @@ ratXtoY=abs(Vtransmit(1)/Vtransmit(2));
 
 if ratYtoX==0 %if the transmitting ray is  entirely horizontl, not worried about bounce
     %check it's not within the flush part of the SMA connector
-            b2h0=IT.b2hi;
-        trans0=IT.transi;
+%%            b2h0=IT.b2hi;
+%%        trans0=IT.transi;
     if P(1)>SMAFL %all reflecteed light is returned, but the transmitted light is considered either transmitted or returned to housing
 
         I_return=I_reflect;
-        
-        %if going forward will be considered transmitted light
-            %to do, consider attenuation loss over the distance
 
         meas.inten(meas.counter)=I_transmit;%measure the transmitting light
         meas.points(meas.counter,:)=P;%measure the location
         meas.counter=meas.counter+1;%increase the counter position
         meas.sum=I_transmit+meas.sum;
         if meas.inten(meas.counter-1)==0
-            display(I_transmit)
-            display(meas.inten(meas.counter-1))
             error('measuring 0')
         end
     else %if it is within the sma connector, remove some of the absorbing light, can't measure
@@ -74,8 +67,8 @@ if ratYtoX==0 %if the transmitting ray is  entirely horizontl, not worried about
     %%disp(I_transmit)
     %%disp(I_reflect)
 
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(sum(meas.inten)-Meas0),(IT.housi-House0),(IT.transi-trans0),(IT.b2hi-b2h0)],SystemParam,'horz ray w/in meas_SMA_check',1,Global_Index,Tally);
-            [Tally,~,~]=inOutTrack(I_in,(sum(meas.inten)-Meas0),SystemParam,'horz ray w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(sum(meas.inten)-Meas0),(IT.housi-House0),(IT.transi-trans0),(IT.b2hi-b2h0)],SystemParam,'horz ray w/in meas_SMA_check',1,Global_Index,Tally);
+%%            [Tally,~,~]=inOutTrack(I_in,(sum(meas.inten)-Meas0),SystemParam,'horz ray w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 elseif ratXtoY<=0 %if the transmitting ray is only vertical
@@ -86,18 +79,17 @@ elseif ratXtoY<=0 %if the transmitting ray is only vertical
             %record the values
             %assume we lose all of the light into the housing, nothing is
             %measured
-            IT.housi=I_transmit+(I_reflect*metal_abs)+IT.housi;
-            I_return=I_reflect*(1-metal_abs);
+            IT.housi=I_transmit+I_reflect+IT.housi;
+            I_return=0;
 
-%             IT.housi=I_transmit+IT.housi;
-%             I_return=I_reflect*(1-metal_abs);
+
         else
             %record the measureable values. assume all light is side
             %emitted
             meas.points(meas.counter,:)=P;
-            meas.inten(meas.counter,:)=I_transmit;
+            meas.inten(meas.counter,:)=I_transmit+I_reflect;
             meas.counter=meas.counter+1;
-            meas.sum=I_transmit+meas.sum;
+            meas.sum=I_transmit+I_reflectmeas.sum;
             if meas.inten(meas.counter-1)==0
                 display(I_transmit)
                 display(meas.inten(meas.counter-1))
@@ -106,8 +98,8 @@ elseif ratXtoY<=0 %if the transmitting ray is only vertical
             I_return=I_reflect;%have no light returning eventually
 
         end
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'vert ray w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'vert ray w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'vert ray w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'vert ray w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 elseif P(1)>SMAFL && XSMA>SMA_L%if the impact point isn't within the SMA connector & the transmitting ray wont bounce off the SMA connector
@@ -125,8 +117,8 @@ elseif P(1)>SMAFL && XSMA>SMA_L%if the impact point isn't within the SMA connect
     %set up for returning to the traveling function
     P_return=P;
     I_return=I_reflect;
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA1, normal, w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA1, normal, w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA1, normal, w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA1, normal, w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 elseif P(1)>=0 && P(1)<=SMAFL %if the ray impacts within the flush part of the sma connector
@@ -134,13 +126,12 @@ elseif P(1)>=0 && P(1)<=SMAFL %if the ray impacts within the flush part of the s
     I_return=I_reflect*(1-metal_abs);%mostly things reflect except for whats lost during
     IT.housi=(I_reflect*(metal_abs))+I_transmit+IT.housi;%amount absorbed by the metal
     P_return=P;
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 elseif XSMA<SMAFL %if the light bounced outside of the flush part, but would hit a complicated part of the interior SMA geometry
     %assume it to be not bounce-able/unimportant to follow
-%     IT.approxi=I_transmit;
     %take a normal measurement and reset
     %measurements
     meas.inten(meas.counter)=I_transmit;%measure the transmitting light
@@ -148,15 +139,13 @@ elseif XSMA<SMAFL %if the light bounced outside of the flush part, but would hit
     meas.counter=meas.counter+1;%increase the counter position
     meas.sum=I_transmit+meas.sum;
     if meas.inten(meas.counter-1)==0
-        display(I_transmit)
-        display(meas.inten(meas.counter-1))
         error('measuring 0')
     end
     %set up for returning to the traveling function
     P_return=P;
     I_return=I_reflect;
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA endbouncequick w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA endbouncequick w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA endbouncequick w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA endbouncequick w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 else%if the light bounces in the sma (outside of the flush part), and the ray would hit the bounceable part of the sma connector
@@ -189,8 +178,8 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
     meas.points(meas.counter,:)=Pbounce;
     meas.counter=meas.counter+1;
     meas.sum=I_bounce+meas.sum;
-    [Tally,~,~]=DifTrack(I_bounce,(meas0-sum(meas.inten)),SystemParam,'bounceloop measurement w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(meas0-sum(meas.inten)),SystemParam,'bounceloop measurement w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack(I_bounce,(meas0-sum(meas.inten)),SystemParam,'bounceloop measurement w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(meas0-sum(meas.inten)),SystemParam,'bounceloop measurement w/in meas_SMA_check',1,Global_Index,Tally);
 
     if meas.inten(meas.counter-1)==0
         display(I_transmit)
@@ -227,7 +216,7 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
         
         I_bouncei=kloss*(1-metal_abs)*I_bounce;%input intensity into fresnel eq()
         I_bounceloss=(I_bounce-I_bouncei)+I_bounceloss;%loss amount
-        [Tally,~,~] =  DifTrack(I_bounce,[I_bouncei,I_bounceloss],SystemParam,'BounceLoss w/in meas_SMA_check',1,Global_Index,Tally);
+%%        [Tally,~,~] =  DifTrack(I_bounce,[I_bouncei,I_bounceloss],SystemParam,'BounceLoss w/in meas_SMA_check',1,Global_Index,Tally);
 
         %define the surface
         nhat=[0,-1];
@@ -238,11 +227,11 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
         [theta_i,theta_t,theta_c,~,~,V_reflect,~] = Snells(Vreturn,nhat,ni,nt,horz_surf,direction);
         [I_reflect_sma,I_transmit_fib]=FresnelEq(I_bouncei,SystemParam,theta_i,theta_t,theta_c,ni,nt);
         %check if there's a lot of differences
-        [Tally,~,~] =  DifTrack(I_bouncei,[I_reflect_sma,I_transmit_fib],SystemParam,'FresnellEq bounce w/in meas_SMA_check',1,Global_Index,Tally);
+%%        [Tally,~,~] =  DifTrack(I_bouncei,[I_reflect_sma,I_transmit_fib],SystemParam,'FresnellEq bounce w/in meas_SMA_check',1,Global_Index,Tally);
         
         %record the extra intensity coming back in
         I_extra_return(bounce)=I_transmit_fib;
-        [Tally,~,~]=DifTrack(I_bounce,[I_extra_return(bounce),I_reflect_sma,I_bounceloss;],SystemParam,'bounceloop w/in meas_SMA_check',1,Global_Index,Tally);
+%%        [Tally,~,~]=DifTrack(I_bounce,[I_extra_return(bounce),I_reflect_sma,I_bounceloss;],SystemParam,'bounceloop w/in meas_SMA_check',1,Global_Index,Tally);
 
         I_bounce=I_reflect_sma;
         Pbounce=[xbounce,P(2)];
@@ -276,8 +265,8 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
 
     P_return(1)=((P(1).*I_reflect)+(dot(P_extra_return(:,1),I_extra_return)))./I_return;
     P_return(2)=P(2);
-    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi),Cutoff0-IT.cutoffi;],SystemParam,'SMA fullbounce w/in meas_SMA_check',1,Global_Index,Tally);
-    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA fullbounce w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi),Cutoff0-IT.cutoffi;],SystemParam,'SMA fullbounce w/in meas_SMA_check',1,Global_Index,Tally);
+%%    [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA fullbounce w/in meas_SMA_check',1,Global_Index,Tally);
 
     return
 end
