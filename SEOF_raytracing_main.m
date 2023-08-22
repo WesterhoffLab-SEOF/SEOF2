@@ -258,7 +258,7 @@ Xvec=0:(SystemParam.division/10e3):(SystemParam.xlen/10e3);
         Tally.big_dif_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.big_dif_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
         Tally.big_dif_count_meas_main=cell(it_num,SystemParam.num_fib,aa_lim);
-Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
+        Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
         Tally.IO_amt_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.IO_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.IO_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
@@ -276,9 +276,9 @@ Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of th
         Tally.IO_fun_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);%record the name of the function causing issues
         Tally.IO_count_meas_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);
         Tally.case1count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.case2count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.case3count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
+        Tally.case2count=zeros(it_num,SystemParam.num_fib,aa_lim);
+        Tally.case3count=zeros(it_num,SystemParam.num_fib,aa_lim);
+        Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
 
     %within each individual fiber
     for h=1:c%%%%%%include for number fiber change
@@ -330,15 +330,15 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         for aa=1:aa_lim
             %include surface roughness distribution
             %include NP distribution
+                
+            for xx=1:a
+                for yy=1:b
+                %initialize measurement storage vectors
                 meas.points= zeros(2*10e6,2);
                 meas.inten = zeros(2*10e6,1);
                 meas.counter=1;
-                meas.str8points=zeros(size(meas.points));
-                meas.str8inten=zeros(size(meas.inten));
-                meas.str8counter=1;
                 meas.sum=0;
-            for xx=1:a
-                for yy=1:b
+                
                 Global_Index=[iteration,h,aa,xx,yy];%record the index values, may need to include a gg if scatter cone at the front
                 %tracking and summing values for each ray
                 %temporary storage of data
@@ -369,6 +369,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                 bounce_num=1;
                 st_index=2;%starting index to allocate the first scattered ray we're tracking
                 pow_check=0;
+                MEAS0=sum(meas.inten);%initial measurement value
                 while any(I_in) && while_num<=max_loop
             %%%%%%5%initial variable set up for while loop%%%%%
                     I_0=I_in(1,while_num);
@@ -388,27 +389,16 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                     abs0=ray.absorbed(aa,xx,yy);
                     back0=ray.backscat(aa,xx,yy);
                     smaabs0=ray.SMAabs(aa,xx,yy);
+                    approx0=ray.approxpow(aa,xx,yy);
                     if I_0<SystemParam.I_min%check to make sure the while loop is worth it to keep running
                         ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_0;%mark amount of light left after cutoff
                         I_in(1,while_num)=0;%redundant with the continue but just in case
                         while_num=while_num+1;%update the while number
                         continue%go to the next while loop
                     elseif length(I_0)>1 || length((P_0))>2 || length(Theta_0)>1 || length(V_0)>2
-                        %disp(P_0)
-                        %disp(I_0)
-                        %disp(Theta_0)
-                        %disp(V_0)
                         error('too big vector')
                     elseif isnan(I_0)
-                        %disp('while num')
-                        %disp(while_num)
-                        %disp(bounce_num)
-                        %disp(P_0)
-                        %disp(direction)
-                        %disp(V_0)
-                        %disp(sum(meas.inten))
-                        error('is NaN')
-                        
+                        error('is NaN')                        
                     end
 
             %%%%%%traveling %%%%%%%%%%%%       
@@ -428,10 +418,11 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                         ray.transmitted(aa,xx,yy)=IT.transi+ray.transmitted(aa,xx,yy);
                      %after travel function
                     meas_dif=sum(meas.inten)-meas_start1;
-                    [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_0,[meas_dif,I_1,IT.backi,IT.absorbi,IT.housi,IT.cutoffi],SystemParam,'Traveling',0,Global_Index,Tally);
+                    Pow_out=[meas_dif,I_1,IT.backi,IT.absorbi,IT.housi,IT.cutoffi,IT.approxi];
+                    [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_0,Pow_out,SystemParam,'Traveling',0,Global_Index,Tally);
                     ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
                     ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
-                    
+            
                     %check if there's enough power to warrant going thru the end reflect
                     %function
                     if I_1<SystemParam.I_min
@@ -442,8 +433,6 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                          I_in(1,while_num)=0;
                          while_num=while_num+1;
                          
-
-
                         continue%go to the next while loop
                     end
                     meas_dif_1=sum(meas.inten)-meas_start0;
@@ -452,8 +441,11 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                     trans_1=ray.transmitted(aa,xx,yy)-trans0;
                     abs_1=ray.absorbed(aa,xx,yy)-abs0;
                     smaabs_1=ray.SMAabs(aa,xx,yy)-smaabs0;
+                     approx_1=ray.approxpow(aa,xx,yy)-approx0;
+                    back_1=ray.backscat(aa,xx,yy)-back0;
+                    Pow_Out=[meas_dif_1,I_1,b2h_1,cutoff_1,trans_1,abs_1,smaabs_1,approx_1,back_1];
 %                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
-                    [Tally,~,~] =  DifTrack(I_0,[meas_dif_1,I_1,b2h_1,cutoff_1,trans_1,abs_1,smaabs_1],SystemParam,'while loop step 0 to step 1',0,Global_Index,Tally);
+                    [Tally,~,~] =  DifTrack(I_0,Pow_Out,SystemParam,'while loop step 0 to step 1',0,Global_Index,Tally);
 
                     
                     meas_start2=sum(meas.inten);%initial total measured before entering into the end reflect function
@@ -535,13 +527,16 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                     trans_final=ray.transmitted(aa,xx,yy)-trans0;
                     abs_final=ray.absorbed(aa,xx,yy)-abs0;
                     smaabs_final=ray.SMAabs(aa,xx,yy)-smaabs0;
+                    approx_final=ray.approxpow(aa,xx,yy)-approx0;
+                    back_final=ray.backscat(aa,xx,yy)-back0;
 %                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
-                    [Tally,~,~] =  DifTrack(I_0,[meas_dif_final,sum_forwardscat,b2h_final,cutoff_final,trans_final,abs_final,smaabs_final],SystemParam,'while loop',0,Global_Index,Tally);
+                    Pow_out=[sum_forwardscat,meas_dif_final,b2h_final,cutoff_final,trans_final,abs_final,smaabs_final,approx_final,back_final];
+                    [Tally,~,~] =  DifTrack(I_0,Pow_Out,SystemParam,'while loop',0,Global_Index,Tally);
 
                 end
                 %summing all of the measured side emitted power
                 
-                ray.pow_side(aa,xx,yy)=sum(meas.inten);
+                ray.pow_side(aa,xx,yy)=sum(meas.inten)-MEAS0;
                 total_pow_use=[ray.pow_side(aa,xx,yy),ray.transmitted(aa,xx,yy),ray.SMAabs(aa,xx,yy),ray.b2hpow(aa,xx,yy),ray.backscat(aa,xx,yy),ray.absorbed(aa,xx,yy),ray.cutoffpow(aa,xx,yy)];
                 
                 %tracking differences
@@ -570,7 +565,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
             meas_inten_aa=cell2mat(aa_Rand(1).meas_inten(:,aa));
                 if any(meas_inten_aa)
                     disp('any')
-                       [XVEC,Y, lengthPlot,pow_side_total] = Bins(meas_point_aa, meas_inten_aa, SystemParam.division, xlen, r_fiber);
+                       [XVEC,Y, lengthPlot,pow_side_total] = Bins(meas_point_aa, meas_inten_aa, SystemParam.division, xlen, r_fiber,SystemParam);
                     use_index=find(meas.points(:,1)>=(2.5*10^4));%indexes of all of the measurement points that correspond to measurable light after the sma
                     water_st_index=find(meas_point_aa(:,1)>=SystemParam.waterstart);
                     SMA_index=find(meas_point_aa(:,1)<=SystemParam.SMA_totallength);
@@ -705,8 +700,7 @@ pie(Power_Track_comp,Power_Track_comp_lab)
 figure(3)
 %title and legend defined earlier lines 95 is through 140ish
 Y_current=cell2mat(FibIt(1).Y(iteration,h));%current I(x) within this iteration and fiber
-X=Xvec-(SystemParam.SMA_totallength/10^4);%starting our X vector at the end of the SMA connector
-plot(X,Y_current)
+plot(XVEC,Y_current)
 title(Title_Main) %defined earlier 
 hold on
 if yes_itname==1%if we need a legend bc there's multiple iterations
@@ -823,14 +817,14 @@ summary(trouble_main) %get a summary of all of the trouble areas in the main cod
 
 IO_idfun=find(IO_bigfun~="");
     if sum(IO_dif_fun,'all')==sum(IO_dif_fun(IO_idfun),'all')
-        IO_bigfun=IO_bigfun(IO_idfun)
-        IO_fun_cats=unique(IO_bigfun)%create a category of each unique function reported with a big dif
+        IO_bigfun=IO_bigfun(IO_idfun);
+        IO_fun_cats=unique(IO_bigfun);%create a category of each unique function reported with a big dif
         IO_trouble_functions=categorical(IO_bigfun,IO_fun_cats);%,fun_categorical);
     else
         error('figure out the indexing issues')
     end
-IO_idmain=find(IO_bigmain~="")    
-IO_main_cats=unique(IO_bigmain(IO_idmain))%create a category of each unique function reported with a big dif
+IO_idmain=find(IO_bigmain~="");    
+IO_main_cats=unique(IO_bigmain(IO_idmain));%create a category of each unique function reported with a big dif
 summary(IO_trouble_functions)%get a summary of all of the trouble functions
 IO_trouble_main=categorical(IO_bigmain,IO_main_cats);%main_categorical);
 summary(IO_trouble_main) %get a summary of all of the trouble areas in the main code
@@ -874,21 +868,21 @@ end
 Changed=dif_contrib_m(:,1);%difference value vector for the table
 Total=dif_contrib_m(:,2);%absolute value vector for the table
 Function=transpose(main_cats); %function
-TabM=table(Changed,Total,'RowNames',Function)
+TabM=table(Changed,Total,'RowNames',Function);
 Changed=dif_contrib_f(:,1);%difference value vector for the table
 Total=dif_contrib_f(:,2);%absolute value vector for the table
 Function=transpose(fun_cats);
-TabF=table(Changed,Total,'RowNames',Function)
+TabF=table(Changed,Total,'RowNames',Function);
 
 
 IO_Changed=IO_dif_contrib_m(:,1);%difference value vector for the table
 IO_Total=IO_dif_contrib_m(:,2);%absolute value vector for the table
 IO_Function=transpose(IO_main_cats); %function
-IO_TabM=table(IO_Changed,IO_Total,'RowNames',IO_Function)
+IO_TabM=table(IO_Changed,IO_Total,'RowNames',IO_Function);
 IO_Changed=IO_dif_contrib_f(:,1);%difference value vector for the table
 IO_Total=IO_dif_contrib_f(:,2);%absolute value vector for the table
 IO_Function=transpose(IO_fun_cats);
-IO_TabF=table(IO_Changed,IO_Total,'RowNames',IO_Function)
+IO_TabF=table(IO_Changed,IO_Total,'RowNames',IO_Function);
 
 
 %%%%%%writing the data to an excel file
