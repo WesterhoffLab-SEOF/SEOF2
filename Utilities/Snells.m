@@ -1,6 +1,8 @@
-function[theta_i,theta_t,theta_c,theta_rh,V_transmit,V_reflect,direction] = Snells(Vin,nhat,ni,nt,horz_surf,direction)
+function[theta_i,theta_t,theta_c,theta_ih,theta_rh,V_transmit,V_reflect,direction] = Snells(Vin,nhat,ni1,nt1,horz_surf,direction)
 %calculates the snell's law different angles, gives back a new light
 %direction%vectors
+ni=real(ni1);
+nt=real(nt1);
 V=Vin;
 if V(2)==0
     dirmult=1;
@@ -32,6 +34,9 @@ Rcw=[cos(theta_rot) ,sin(theta_rot);-sin(theta_rot), cos(theta_rot)];%clock wise
 if length(Vin)==2 %make sure the vectors are appropriate size for a cross prouct
     V=[Vin,0];
 end
+
+theta_ih=abs(asin(norm(cross(V,[n_hor,0])/(norm(V)*norm([n_hor,0])))))*sign(V(1))*sign(V(2));%will assign direction based on Vin
+
 
 theta_i=abs(asin(norm(cross(V,[n_,0])/(norm(V)*norm([n_,0])))));%will assign direction based on Vin
 
