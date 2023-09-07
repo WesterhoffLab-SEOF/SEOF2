@@ -51,5 +51,12 @@ classdef SysParam
         SMA_diam;
         scatter_coeff;
         dif_tol;
+        
+        %added on 8/31/23
+        lossy_f=1;%if the fiber is considered lossy
+        lossy_m=1;%if the medium is considered lossy
+        n_metal;%refractive index of the metal as estimated from https://pubs-aip-org.ezproxy1.lib.asu.edu/aip/jap/article/53/9/6340/308961/Optical-constants-and-spectral-selectivity-of
+        c;%speed of light
+        ang_freq;%angular frequency
     end
 end
