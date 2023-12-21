@@ -44,6 +44,10 @@ elseif ni1==real(SystemParam.n2)
     a_med=SystemParam.kair*10^2;
     ni2=a_med*c/(2*ang_freq);
     lossy_i=lossy_m;
+elseif ni1==real(SystemParam.n4)
+    a_med=SystemParam.k_cytop*10^2;
+    ni2=a_med*c/(2*ang_freq);
+    lossy_i=lossy_m;
 else
     error('need more comprehensive coding of complex RI')
 end
@@ -66,9 +70,12 @@ elseif nt1==real(SystemParam.n2)
     a_med=SystemParam.kair*10^2;
     nt2=a_med*c/(2*ang_freq);
     lossy_t=lossy_m;
+elseif nt1==real(SystemParam.n4)
+    a_med=SystemParam.k_cytop*10^2;
+    nt2=a_med*c/(2*ang_freq);
+    lossy_t=lossy_m;
 else
 % %     check=3;
-
     error('need more comprehensive coding of complex RI')
 end
 
