@@ -1,7 +1,7 @@
 function [Scat_distrib] = Scatter_Coeff(SystemParam)
 %UNTITLED12 Summary of this function goes here
 %   Detailed explanation goes here
-ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nwater];
+ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nwater,SystemParam.n_metal];
 nt_vec=ni_vec;
 st=0;
 last=pi/2;
@@ -53,19 +53,19 @@ for a=1:length(ni_vec)
                     I_forward(i)=I_range(i);
                     countF=countF+1;
                 %if the angle is within the backward range
-                elseif theta_distrib(i)>theta_Bup && theta_distrib(i)<theta_Bdown
+                elseif theta_distrib(i)>theta_Bup && theta_distrib(i)<=theta_Bdown
                      %assign to the backward range
                     I_backward(i)=I_range(i);
                     countB=countB+1;
                 %if the angle is within the upper side range
                 elseif theta_distrib(i)>theta_Fup && theta_distrib(i)<=theta_Bup
-                    I_sideup=I_range(i);
+                    I_sideup(i)=I_range(i);
                     countSU=countSU+1;
                 %if the angle is within the lower side range
-                else% theta_distrib(i)>theta_Fup && theta_distrib(i)<=theta_Bup
-                    I_sidedown=I_range(i);
+                elseif theta_distrib(i)<=theta_Fdown && theta_distrib(i)>theta_Bdown
+                    I_sidedown(i)=I_range(i);
                     countSD=countSD+1;
-%                 else
+                else
 %                     disp('current theta')
 %                     disp(theta_distrib(i))
 %                     disp('Oc')
@@ -78,7 +78,7 @@ for a=1:length(ni_vec)
 %                     disp(theta_Bdown)
 %                     disp('I')
 %                     disp(I_range(i))
-%                     error('unallocated I_range')
+                    error('unallocated I_range')
                 end
             end
             %ratio to the total of each
@@ -89,7 +89,12 @@ for a=1:length(ni_vec)
             scat_total=Sideup+Sidedown+Forward+Backward;
             Rayloss=Sideup+Sidedown+Backward;%total "loss" considered by the rayleigh coeff
 
+            if abs(scat_total-1)>SystemParam.dif_tol
 
+                error('coefficients dont add to 100%')
+
+            end
+            
             %to do, fill the output with somthing appropriate
             Scat_distrib(a,b,c)={[Forward,Backward,Sideup,Sidedown,Rayloss]};
         end
@@ -97,4 +102,3 @@ for a=1:length(ni_vec)
    
 end
 end
-

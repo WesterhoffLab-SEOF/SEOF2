@@ -4,6 +4,7 @@
 %change =  I should wait to change a variable name until I can do it
 %en-masse
 %include =  its something for later when the model has grown
+
 close all; clear all;%fresh slate
 addpath('Utilities');%functions go into utilities folder
 addpath('Data Structs');%structs go into this folder
@@ -13,35 +14,59 @@ addpath('Data Structs');%structs go into this folder
 SystemParam = SysParam;
 %data display variables... what do you want to see generated?
 writeToFile =1;   % set to 1 to save generated results to excel file, set to 0 otherwise
-filename = 'C:\Users\Nora Shapiro\OneDrive - Arizona State University\SEOF_RayTracing_071823\data\MODEL_simple_081723.xlsx'; %name of file %MUST INCLUDE ADDRESS OF DESTINATION FOLDER    
-sheet_num=4;%Excel Sheet number 
-description="Changes: trying a new ray model out. doing 5x5 ray, 5 scatter, 1 bounce max, 2bounce sma . yes sma";%description of the changes made in this file
+filename = 'C:\Users\Nora Shapiro\OneDrive - Arizona State University\SEOF_Raytracing 082823\data\MODEL_090123_2.xlsx'; %name of file %MUST INCLUDE ADDRESS OF DESTINATION FOLDER    
+sheet_num=10;%Excel Sheet number 
+description="Changes:add lossy mediums. checking 12.5 air after changes. 0% bounce abs, reg nmetal. incorparate sma abs. 1cm absorption coeffs ar 38.9, auv0.9,nfi=2e-7;.I=I air5x5 15 scatter, scat max pi/2, y beg, y end, 1 bounce. yes sma. 12.5cm 2bounce sma, dx=100 um ";%description of the changes made in this file
 SystemParam.division=1*10^4;%2 cm division of the measurements of the figure
+
+%light variables
+SystemParam.uv_wavelength = 275;    % wavelength of UV light in nmisplacement dependent radiation for LED model
+SystemParam.c= 299792458;%[m/s] speed of light
+SystemParam.ang_freq=2*pi*SystemParam.c/(SystemParam.uv_wavelength*10^-9);%[rad/s]
+
 
 %parameters for properties of medium a light ray is traveling through
 SystemParam.waterInterface = 0;     %is the fiber submerged? no? then it's in air
-SystemParam.waterstart=1*10^4;      %location at which the water starts (if water is there) 4.5cm [um]
-SystemParam.n1 = 1.50;              % RI of Quartz Optical Fiber
-SystemParam.n2 = 1.00;              % RI of medium w/in the coupling distance/separation distance/"gap" of LED and fiber face
-SystemParam.nwater = 1.333;         % RI of water
+SystemParam.waterstart=4.5*10^4;%4.5*10^4;      %location at which the water starts (if water is there) 4.5cm [um]
+SystemParam.lossy_f=1;%if the fiber is considered lossy
+if SystemParam.lossy_f==1
+    SystemParam.n1 = 1.50+(2*10^-7)*1i;%(0.00002317*1i);%1*10^-5*1i);              % RI of Quartz Optical Fiber
+else%if not considered a lossy medium then it has no imaginary component
+    SystemParam.n1 = 1.50;
+end
+SystemParam.lossy_m=1;%if the medium is considered lossy
 SystemParam.kair = 3*10^-5;             % Attenuation Constant of air 1/cm (assuming 20degC) https://www.ndt.net/article/ultragarsas/63-2008-no.1_03-jakevicius.pdf
+SystemParam.k_water = 0.0293;         %Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
+%calculate the imaginary parts of the RI for air and water from the
+%attenuation coefficients
+if SystemParam.lossy_m==1
+    i_nair=(SystemParam.kair*10^2)*SystemParam.c/(2*SystemParam.ang_freq);
+    i_nwater=(SystemParam.k_water*10^2)*SystemParam.c/(2*SystemParam.ang_freq);
+
+    SystemParam.n2 = 1.00+1i*i_nair;              % RI of medium w/in the coupling distance/separation distance/"gap" of LED and fiber face
+    SystemParam.nwater = 1.333+1i*i_nwater;         % RI of water
+else%if not considered a lossy medium then it has no imaginary component
+    SystemParam.nwater = 1.333;         % RI of water
+    SystemParam.n2 = 1.00;              % RI of medium w/in the coupling distance/separation distance/"gap" of LED and fiber face
+end
+SystemParam.n_metal=(1.3+(2.3*1i));%(2.3*1i);%1+(1i*2);% from https://pubs-aip-org.ezproxy1.lib.asu.edu/aip/jap/article/53/9/6340/308961/Optical-constants-and-spectral-selectivity-of
+
 if (SystemParam.waterInterface == 0)
     ext_media="External Medium: Air"; %string for excel document description
-    SystemParam.n5 = 1.00;          % RI of air
-    SystemParam.k = 3/(1*10^5);   % Attenuation Constant of air at 250nm cm^-1 (assuming exceptionally clear air )https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
+    SystemParam.n5 = SystemParam.n2;          % RI of air
+    SystemParam.k = SystemParam.kair;   % Attenuation Constant of air at 250nm cm^-1 (assuming exceptionally clear air )https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
 else
-    SystemParam.n5 = 1.333;         % RI of water
-    SystemParam.k = 0.0293;         %Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
-    ext_media="External Medium: Air"; %string for excel document description
+    SystemParam.n5 = SystemParam.nwater;         % RI of water
+    SystemParam.k = SystemParam.k_water;         %Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
+    ext_media="External Medium: Water"; %string for excel document description
 end
 %paramaters of the LED
-SystemParam.I_init = 70*(10^3);      % LED intensity, 70 mW
+SystemParam.I_init = 70*(10^3)/2;      % LED intensity, 70 mW
 SystemParam.LEDd=0.8;                 %mm, diameter of LED
 SystemParam.LEDa=deg2rad(175);      %angle distribution of light
-SystemParam.q=0;                   %exponent for vertical DOM for LED from /science/article/pii/1350448795002847
+SystemParam.q=0;                    %exponent for vertical DOM for LED from /science/article/pii/1350448795002847
 SystemParam.Half_t=deg2rad(70);     %Angle from LED manufacturer's at which the power is <1/2 the max
 SystemParam.led_distance = 1;       %distance of LED from fiber in mm
-SystemParam.uv_wavelength = 275;    % wavelength of UV light in nmisplacement dependent radiation for LED model
 SystemParam.SMA=1;%is there a SMA connector used to couple the fiber to the LED? 1 for yes, 0 for no
 SystemParam.SMA_flushlength=1*10^4;%the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
 SystemParam.SMA_totallength=2.5*10^4;%the total length of the SMA connector is 2.5 cm long
@@ -51,25 +76,27 @@ SystemParam.metal_abs=0.0;         %absorption from metal of the SMA connector
 SystemParam.r_fiber = 500/2;       %um
 SystemParam.xlen = (12.5*10^4);      %10cm given in (um), length along fiber
 SystemParam.meas_distance = 0;    %distance measured from the fiber
-SystemParam.num_fib=1;                %number of fibers, 1, 4 , or 19
+SystemParam.num_fib=1;            %number of fibers, 1, 4 , or 19
 %parameters for changing fidelity of the simulation
 SystemParam.angnum=5;               %number of angles of led emission (must be less than raynum, below)
 SystemParam.raynum=SystemParam.angnum^2;  %total number of rays of led emission
-SystemParam.scatnum=5;%maximum number of rays produced by the scattering during end reflect
-SystemParam.maxbounce=1;%100;%maximum number of bounces to track
-SystemParam.cont_dx=2*10^4;%continuous transmission interval [um]
-SystemParam.scat_ang_max=pi/3;%maximum scattering angle
+SystemParam.scatnum=15;             %maximum number of rays produced by the scattering during end reflect
+scat_front=1;                       %make this a system param if beneficial to keep it %if there's a scatter cone considered in the front
+SystemParam.maxbounce=1;%maximum number of bounces to track
+SystemParam.cont_dx=100;%continuous transmission interval [um]
+SystemParam.scat_ang_max=pi/2;%3*pi/7;%3*pi/7;%maximum scattering angle 5 degrees
 SystemParam.housing_bounce=2;%maximum number of times I'm willing to let the ray bounce between the SMA and the fiber
 SystemParam.ang_div=2;%divisions of angles to look at
-SystemParam.dif_tol=10^-6;%tolerance of the difference
+SystemParam.dif_tol=10^-10;%tolerance of the difference
 %possibly include SystemParam for point at which a ray is considered
 %horizontal or vertical
 %trying out different logic for stuff
 %SystemParam.dxordr=1;%select 0 if the logic is using dX, select 1 if the logic is using the whole travel distance
 
 %include parameters for the polymer coating factors
-
+SystemParam.n4=1.353;
 %include parameters for the nanoparticle coating factors
+SystemParam.n3=1.5; %RI of silica beads
 
 %calculated parameters
 %minimum photon energy at the wavelength of light before it changes "color"
@@ -78,9 +105,9 @@ SystemParam.I_min=SystemParam.photon_min*10;%(uW)
 
 %absorption/attenuation coefficient calculations, Gerd Keiser. (2011). Optical Fiber Communications (4th ed.). McGraw-Hill Education.
 %attenuation coefficients
-SystemParam.alpha_uv=(0.1*10^-6);%db/um friom https://www.content.molex.com/dxdam/literature/987650-8936.pdf
+SystemParam.alpha_uv=(0.9*10^-6);%db/um friom https://www.content.molex.com/dxdam/literature/987650-8936.pdf
 %SystemParam.alpha_Cytop=(1000*10^-9);%db/um from cytop estimate in friday pres 091622
-SystemParam.alpha_r=(1.64*10^-9)*(850/SystemParam.uv_wavelength)^4;%db/um 
+SystemParam.alpha_r=38.9*10^-6;%38.9 3968*10^-6;%197.55,98.33*10^-6;;%12.99*10^-6;%db/um%(1.64*10^-9)*(850/SystemParam.uv_wavelength)^4;%db/um 
 %SystemParam.RayleighCoeff=(1-10^(-SystemParam.alpha_r*SystemParam.xlen/10));%coefficient used to find the amt of light scattered
 %use function to calculate the percent side scattered in the theta_OC
 [Scat_distrib] = Scatter_Coeff(SystemParam);
@@ -241,13 +268,17 @@ Xvec=0:(SystemParam.division/10e3):(SystemParam.xlen/10e3);
     %set up of incoming ray angle, intensity, for a variable number of fibers
     LED_d=SystemParam.led_distance*(10^-3);%(mm)%LED distance in mm for Entering Light
     [Ray_X,Ray_Y,alpha_ang,beta_ang,Power_mat] = OutputLED3D(SystemParam);
-    powercheck=sum(Power_mat,'all');% make sure power isn't greater than the total LED power
+    powercheck=sum(Power_mat,'all')*(SystemParam.LEDd*10^-1)^2;% make sure power isn't greater than the total LED power
     %determining light rays entering each fiber
     [circles,combocircles] = fiberBundle3D(SystemParam.num_fib,r_fiber*2);
     %[Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D_AINsubstrate(SystemParam,r_fiber, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Intensity_mat,circles);
-    [Ent_Pow,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D(SystemParam,r_fiber, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Power_mat,circles);
+    [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D(SystemParam,r_fiber, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Power_mat,circles);
+    %compressed to 2D
+%   Ent_Int=Ent_Int./4;
+    [a,b,c]=size(Ent_Int); %[num ang changes,num y locations, number fibers]
 
-    [a,b,c]=size(Ent_Pow); %[num ang changes,num y locations, number fibers]
+    
+   
               %empty storage for a numeric count of some stuff for trouble
               %shooting
         Tally.photon_vert_count=zeros(it_num,SystemParam.num_fib,aa_lim);
@@ -258,7 +289,7 @@ Xvec=0:(SystemParam.division/10e3):(SystemParam.xlen/10e3);
         Tally.big_dif_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.big_dif_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
         Tally.big_dif_count_meas_main=cell(it_num,SystemParam.num_fib,aa_lim);
-Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
+        Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
         Tally.IO_amt_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.IO_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
         Tally.IO_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
@@ -301,11 +332,13 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         aa_Rand(1).UC=zeros(1,aa_lim);aa_Rand(2).UC=zeros(1,aa_lim);
         aa_Rand(1).RatioIsIt=zeros(1,aa_lim);aa_Rand(2).RatioIsIt=zeros(1,aa_lim);
         aa_Rand(1).Y=cell(aa_lim,1);aa_Rand(2).Y=cell(aa_lim,1);
+%         aa_Rand(1).meas_inten=cell(1,aa_lim); %length of all the rays used
+%         aa_Rand(1).meas_points=cell(1,aa_lim);%length of all the rays used
         aa_Rand(1).meas_inten=cell((a*b),aa_lim); %length of all the rays used
         aa_Rand(1).meas_points=cell((a*b),aa_lim);%length of all the rays used
         %empty storage vector setup for each individual ray 
         %possibly will need to include dimension for the scatter cone later
-        %(a,b,ggmax,aa_lim)
+        %(aa_lim,a,b,gg_max)
         ray.Pow_enter=zeros(aa_lim,a,b);%=I_ent0
         ray.transmitted=zeros(aa_lim,a,b);
         ray.pow_side=zeros(aa_lim,a,b);
@@ -330,218 +363,235 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         for aa=1:aa_lim
             %include surface roughness distribution
             %include NP distribution
-                meas.points= zeros(2*10e6,2);
-                meas.inten = zeros(2*10e6,1);
-                meas.counter=1;
-                meas.str8points=zeros(size(meas.points));
-                meas.str8inten=zeros(size(meas.inten));
-                meas.str8counter=1;
-                meas.sum=0;
             for xx=1:a
                 for yy=1:b
-                Global_Index=[iteration,h,aa,xx,yy];%record the index values, may need to include a gg if scatter cone at the front
-                %tracking and summing values for each ray
-                %temporary storage of data
-
-                %initialize summed/tallied values
-                Y_sum=zeros(size(Xvec));
-                
-                %include ? scatter cone. would need to go back and add a gg
-                %dimension for all ray values
-                %for gg=1:cone_num
-                
-                %preallocate empty vectors with limits for the  while loop
-                max_loop=1+(SystemParam.maxbounce*SystemParam.scatnum);%max number of loops to run
-
-                I_in=zeros(1,(max_loop));
-                I_intrack=zeros(1,(max_loop));
-                P_in=zeros((max_loop),2);
-                Theta_in=zeros(1,(max_loop)); 
-                Direction_in=zeros(1,(max_loop)); 
-                %assign starting while loop values
-                ray.Pow_enter(aa,xx,yy)=Ent_Pow(xx,yy,h);
-                I_in(1,1)=Ent_Pow(xx,yy,h);
-                Theta_in(1,1)=Theta(xx,yy,h);
-                P_in(1,1:2)=[0,y0(xx,yy,h)];
-                Direction_in(1,1)=1;
-                %assign initial index values
-                while_num=1;
-                bounce_num=1;
-                st_index=2;%starting index to allocate the first scattered ray we're tracking
-                pow_check=0;
-                while any(I_in) && while_num<=max_loop
-            %%%%%%5%initial variable set up for while loop%%%%%
-                    I_0=I_in(1,while_num);
-                    I_intrack(1,while_num)=I_0;
-                    pow_check=pow_check+I_0;
-                    P_0=P_in(while_num,:);
-                    Theta_0=Theta_in(1,while_num);
-                    direction=Direction_in(1,while_num);
-                    V_0=[direction*abs(cos(Theta_0)),sin(Theta_0)];
-                    %initial measurement for use in later
-                    %troubleshooting/difference checking
+                    %measurement storage vectors
+                    meas.points= zeros(2*10e6,2);
+                    meas.inten = zeros(2*10e6,1);
+                    meas.counter=1;
+                    meas.sum=0;
                     
-                    meas_start0=sum(meas.inten);
-                    b2h0=ray.b2hpow(aa,xx,yy);
-                    cutoff0=ray.cutoffpow(aa,xx,yy);
-                    trans0=ray.transmitted(aa,xx,yy);
-                    abs0=ray.absorbed(aa,xx,yy);
-                    back0=ray.backscat(aa,xx,yy);
-                    smaabs0=ray.SMAabs(aa,xx,yy);
-                    if I_0<SystemParam.I_min%check to make sure the while loop is worth it to keep running
-                        ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_0;%mark amount of light left after cutoff
-                        I_in(1,while_num)=0;%redundant with the continue but just in case
-                        while_num=while_num+1;%update the while number
-                        continue%go to the next while loop
-                    elseif length(I_0)>1 || length((P_0))>2 || length(Theta_0)>1 || length(V_0)>2
-                        %disp(P_0)
-                        %disp(I_0)
-                        %disp(Theta_0)
-                        %disp(V_0)
-                        error('too big vector')
-                    elseif isnan(I_0)
-                        %disp('while num')
-                        %disp(while_num)
-                        %disp(bounce_num)
-                        %disp(P_0)
-                        %disp(direction)
-                        %disp(V_0)
-                        %disp(sum(meas.inten))
-                        error('is NaN')
-                        
+                    Global_Index=[iteration,h,aa,xx,yy];%record the index values, may need to include a gg if scatter cone at the front
+                    Y_sum=zeros(size(Xvec));
+                    %create a scatter cone
+                    if scat_front==1
+                        [I_scatter,Theta_enter]=scatter_cone(SystemParam,Theta(xx,yy,h),1);
+                        I_enter=I_scatter.*Ent_Int(xx,yy,h);
+                        gg_max=length(I_scatter);
+                    else
+                        I_enter=Ent_Int(xx,yy,h);
+                        Theta_enter=Theta(xx,yy,h);
+                        gg_max=1;
                     end
-
-            %%%%%%traveling %%%%%%%%%%%%       
-                    %traveling the length of the fiber
-                    %start by recording the initial currently measured
-                    %intensity
-                    meas_start1=sum(meas.inten);
-%                     %check transmission %should be in the travel function
-                        [I_1,V_1,P_1,direction,meas,IT,Tally] = Traveling(I_0,V_0,P_0,direction,SystemParam,Bounds,Global_Index,Tally,meas);%temporary
-                        %record various loss tallies
-                        ray.SMAabs(aa,xx,yy)=IT.housi+ray.SMAabs(aa,xx,yy);
-                        ray.absorbed(aa,xx,yy)=IT.absorbi+ray.absorbed(aa,xx,yy);
-                        ray.backscat(aa,xx,yy)=IT.backi+ray.backscat(aa,xx,yy);
-                        ray.cutoffpow(aa,xx,yy)=IT.cutoffi+ray.cutoffpow(aa,xx,yy);
-                        ray.approxpow(aa,xx,yy)=IT.approxi+ray.approxpow(aa,xx,yy);
-                        ray.b2hpow(aa,xx,yy)=IT.b2hi+ray.b2hpow(aa,xx,yy);
-                        ray.transmitted(aa,xx,yy)=IT.transi+ray.transmitted(aa,xx,yy);
-                     %after travel function
-                    meas_dif=sum(meas.inten)-meas_start1;
-                    [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_0,[meas_dif,I_1,IT.backi,IT.absorbi,IT.housi,IT.cutoffi],SystemParam,'Traveling',0,Global_Index,Tally);
-                    ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
-                    ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
-                    
-                    %check if there's enough power to warrant going thru the end reflect
-                    %function
-                    if I_1<SystemParam.I_min
-                        %store and record data. much more probably
-                        ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_1;%
-                        %lots of stuff in here
-                        %reset loop
-                         I_in(1,while_num)=0;
-                         while_num=while_num+1;
-                         
-
-
-                        continue%go to the next while loop
-                    end
-                    meas_dif_1=sum(meas.inten)-meas_start0;
-                    b2h_1=ray.b2hpow(aa,xx,yy)-b2h0;
-                    cutoff_1=ray.cutoffpow(aa,xx,yy)-cutoff0;
-                    trans_1=ray.transmitted(aa,xx,yy)-trans0;
-                    abs_1=ray.absorbed(aa,xx,yy)-abs0;
-                    smaabs_1=ray.SMAabs(aa,xx,yy)-smaabs0;
-%                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
-                    [Tally,~,~] =  DifTrack(I_0,[meas_dif_1,I_1,b2h_1,cutoff_1,trans_1,abs_1,smaabs_1],SystemParam,'while loop step 0 to step 1',0,Global_Index,Tally);
-
-                    
-                    meas_start2=sum(meas.inten);%initial total measured before entering into the end reflect function
-              %%%%%%%end reflect stuff%%%%%%%%%
-                    if bounce_num<=SystemParam.maxbounce
-                        %create the new rays for the loop, update the
-                        %bounce number, take relevant measurements and
-                        %tallies.
-                        [I_scat,Theta_scat,I_trans,direction,b2h,bounce_num,Tally,meas]= EndReflect(I_1,V_1,P_1,SystemParam,direction,bounce_num,Global_Index,Tally,meas);  
-                        %record and save
-                        ray.transmitted(aa,xx,yy)=ray.transmitted(aa,xx,yy)+I_trans;
-                        ray.b2hpow(aa,xx,yy)=b2h+ray.b2hpow(aa,xx,yy);%record and save
-                        I_scat(I_scat<SystemParam.I_min)=0;%any of the scattered rays less than the minimum tracking power are set to 0
-                        %create approprate indices for assigning the scattered values to the main while loop vectors
-                        end_index=st_index+length(I_scat)-1;
-                        indices_assign=st_index:1:end_index;
-                        indices_assign=indices_assign(indices_assign<=max_loop);%make sure  the indices are under the max value
-                        %sort the incoming vector to prioritize highest
-                        %bvalues to be assigned to the vector
-                        [I_sort_scat,sort_scat]=sort(I_scat,'descend');
-                     
-                        if ~isempty(indices_assign)%otherwise, nothing will need to be assigned to the loop vector
-                            if end_index>max_loop%if there aren't enough spots to allocate all new I_sorted
-                                highest_index=find(indices_assign==max_loop);%gives the total amount of spots available to allocate the sorted scI_Scat to
-                                sort_scat=sort_scat(1:highest_index);
-                            else%if theres plenty of space
-                                highest_index=length(indices_assign);
+                        %tracking and summing values for each ray
+                        %temporary storage of data
+                        for gg=1:gg_max
+                            %initialize the entering light values
+                            I_ent=I_enter(gg);
+                            Theta_ent=Theta_enter(gg);
+                            %preallocate empty vectors with limits for the  while loop
+                            max_loop=1+(SystemParam.maxbounce*SystemParam.scatnum);%max number of loops to run
+                            
+                            I_in=zeros(1,(max_loop));
+                            I_intrack=zeros(1,(max_loop));
+                            P_in=zeros((max_loop),2);
+                            Theta_in=zeros(1,(max_loop));
+                            Direction_in=zeros(1,(max_loop));
+                            %assign starting while loop values
+                            ray.Pow_enter(aa,xx,yy)=I_ent+ray.Pow_enter(aa,xx,yy);
+                            I_in(1,1)=I_ent;
+                            Theta_in(1,1)=Theta_ent;
+                            P_in(1,1:2)=[0,y0(xx,yy,h)];
+                            Direction_in(1,1)=1;
+                            %assign initial index values
+                            while_num=1;
+                            bounce_num=1;
+                            st_index=2;%starting index to allocate the first scattered ray we're tracking
+                            pow_check=0;
+                            MEAS0=sum(meas.inten);
+                            while any(I_in) && while_num<=max_loop
+                                %%%%%%5%initial variable set up for while loop%%%%%
+                                I_0=I_in(1,while_num);
+                                I_intrack(1,while_num)=I_0;
+                                pow_check=pow_check+I_0;
+                                P_0=P_in(while_num,:);
+                                Theta_0=Theta_in(1,while_num);
+                                direction=Direction_in(1,while_num);
+                                V_0=[direction*abs(cos(Theta_0)),sin(Theta_0)];
+                                %initial measurement for use in later
+                                %troubleshooting/difference checking
+                                
+                                meas_start0=sum(meas.inten);
+                                b2h0=ray.b2hpow(aa,xx,yy);
+                                cutoff0=ray.cutoffpow(aa,xx,yy);
+                                trans0=ray.transmitted(aa,xx,yy);
+                                abs0=ray.absorbed(aa,xx,yy);
+                                back0=ray.backscat(aa,xx,yy);
+                                smaabs0=ray.SMAabs(aa,xx,yy);
+                                approx0=ray.approxpow(aa,xx,yy);
+                                if I_0<SystemParam.I_min%check to make sure the while loop is worth it to keep running
+                                    ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_0;%mark amount of light left after cutoff
+                                    I_in(1,while_num)=0;%redundant with the continue but just in case
+                                    while_num=while_num+1;%update the while number
+                                    continue%go to the next while loop
+                                elseif length(I_0)>1 || length((P_0))>2 || length(Theta_0)>1 || length(V_0)>2
+                                    
+                                    error('too big vector')
+                                elseif isnan(I_0)
+                                    
+                                    error('is NaN')
+                                    
+                                end
+                                
+                                %%%%%%traveling %%%%%%%%%%%%
+                                %traveling the length of the fiber
+                                %start by recording the initial currently measured
+                                %intensity
+                                meas_start1=sum(meas.inten);
+                                %                     %check transmission %should be in the travel function
+                                [I_1,V_1,P_1,direction,meas,IT,Tally] = Traveling(I_0,V_0,P_0,direction,SystemParam,Bounds,Global_Index,Tally,meas);%temporary
+                                %record various loss tallies
+                                ray.SMAabs(aa,xx,yy)=IT.housi+ray.SMAabs(aa,xx,yy);
+                                ray.absorbed(aa,xx,yy)=IT.absorbi+ray.absorbed(aa,xx,yy);
+                                ray.backscat(aa,xx,yy)=IT.backi+ray.backscat(aa,xx,yy);
+                                ray.cutoffpow(aa,xx,yy)=IT.cutoffi+ray.cutoffpow(aa,xx,yy);
+                                ray.approxpow(aa,xx,yy)=IT.approxi+ray.approxpow(aa,xx,yy);
+                                ray.b2hpow(aa,xx,yy)=IT.b2hi+ray.b2hpow(aa,xx,yy);
+                                ray.transmitted(aa,xx,yy)=IT.transi+ray.transmitted(aa,xx,yy);
+                                %after travel function
+                                meas_dif=sum(meas.inten)-meas_start1;
+                                %                     disp('Traveling')
+                                Pow_out=[meas_dif,I_1,IT.backi,IT.absorbi,IT.housi,IT.cutoffi,IT.approxi];
+                                
+                                [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_0,Pow_out,SystemParam,'Traveling',0,Global_Index,Tally);
+                                ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
+                                ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
+                                
+                                %check if there's enough power to warrant going thru the end reflect
+                                %function
+                                if I_1<SystemParam.I_min
+                                    %store and record data. much more probably
+                                    ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_1;%
+                                    %lots of stuff in here
+                                    %reset loop
+                                    I_in(1,while_num)=0;
+                                    while_num=while_num+1;
+                                    
+                                    continue%go to the next while loop
+                                end
+                                meas_dif_1=sum(meas.inten)-meas_start0;
+                                b2h_1=ray.b2hpow(aa,xx,yy)-b2h0;
+                                cutoff_1=ray.cutoffpow(aa,xx,yy)-cutoff0;
+                                trans_1=ray.transmitted(aa,xx,yy)-trans0;
+                                abs_1=ray.absorbed(aa,xx,yy)-abs0;
+                                smaabs_1=ray.SMAabs(aa,xx,yy)-smaabs0;
+                                approx_1=ray.approxpow(aa,xx,yy)-approx0;
+                                back_1=ray.backscat(aa,xx,yy)-back0;
+                                %                     disp('while loop step 0 to step 1')
+                                Pow_Out=[meas_dif_1,I_1,b2h_1,cutoff_1,trans_1,abs_1,smaabs_1,approx_1,back_1];
+                                %                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
+                                [Tally,~,~] =  DifTrack(I_0,Pow_Out,SystemParam,'while loop step 0 to step 1',0,Global_Index,Tally);
+                                
+                                cutoffstart=ray.cutoffpow(aa,xx,yy);
+                                meas_start2=sum(meas.inten);%initial total measured before entering into the end reflect function
+                                %%%%%%%end reflect stuff%%%%%%%%%
+                                %               disp('sum forward scatter')
+                                if bounce_num<=SystemParam.maxbounce
+                                    %create the new rays for the loop, update the
+                                    %bounce number, take relevant measurements and
+                                    %tallies.
+                                    [I_scat,Theta_scat,I_trans,direction,b2h,bounce_num,Tally,meas]= EndReflect(I_1,V_1,P_1,SystemParam,direction,bounce_num,Global_Index,Tally,meas);
+                                    %record and save
+                                    ray.transmitted(aa,xx,yy)=ray.transmitted(aa,xx,yy)+I_trans;
+                                    ray.b2hpow(aa,xx,yy)=b2h+ray.b2hpow(aa,xx,yy);%record and save
+                                    I_scat(I_scat<SystemParam.I_min)=0;%any of the scattered rays less than the minimum tracking power are set to 0
+                                    %create approprate indices for assigning the scattered values to the main while loop vectors
+                                    end_index=st_index+length(I_scat)-1;
+                                    indices_assign=st_index:1:end_index;
+                                    indices_assign=indices_assign(indices_assign<=max_loop);%make sure  the indices are under the max value
+                                    %sort the incoming vector to prioritize highest
+                                    %bvalues to be assigned to the vector
+                                    [I_sort_scat,sort_scat]=sort(I_scat,'descend');
+                                    
+                                    if ~isempty(indices_assign)%otherwise, nothing will need to be assigned to the loop vector
+                                        if end_index>max_loop%if there aren't enough spots to allocate all new I_sorted
+                                            highest_index=find(indices_assign==max_loop);%gives the total amount of spots available to allocate the sorted scI_Scat to
+                                            ray.cutoffpow(aa,xx,yy)=sum(I_scat(sort_scat(highest_index+1:end)))+ray.cutoffpow(aa,xx,yy);
+                                            sort_scat=sort_scat(1:highest_index);
+                                        else%if theres plenty of space
+                                            highest_index=length(indices_assign);
+                                        end
+                                        
+                                        %new loop assigned rays
+                                        I_in(1,indices_assign(1):indices_assign(highest_index))=I_scat(sort_scat);
+                                        Theta_in(1,indices_assign(1):indices_assign(highest_index))=Theta_scat(sort_scat);
+                                        P_in(indices_assign(1):indices_assign(highest_index),1)=P_1(1);P_in(indices_assign(1):indices_assign(end),2)=P_1(2);%all will have same initial point
+                                        Direction_in(1,indices_assign(1):indices_assign(highest_index))=direction;
+                                        sum_forwardscat=sum(I_scat(sort_scat));
+                                    else
+                                        sum_forwardscat=0;
+                                        
+                                    end
+                                    %update the starting index
+                                    st_index=end_index+1;
+                                else%if we've already had the max number of bounces, just record the transmitted and/or lost light
+                                    [I_scat,~,I_trans,~,b2h,~,Tally,meas]= EndReflect(I_1,V_1,P_1,SystemParam,direction,bounce_num,Global_Index,Tally,meas);
+                                    ray.transmitted(aa,xx,yy)=ray.transmitted(aa,xx,yy)+I_trans;
+                                    ray.b2hpow(aa,xx,yy)=b2h+ray.b2hpow(aa,xx,yy);%record and save
+                                    %record what isn't being tracked
+                                    ray.cutoffpow(aa,xx,yy)=sum(I_scat)+ray.cutoffpow(aa,xx,yy);
+                                    sum_forwardscat=0;
+                                end
+                                %check if there's any major differences in the total
+                                meas_dif=sum(meas.inten)-meas_start2;
+                                cut_off=ray.cutoffpow(aa,xx,yy)-cutoffstart;
+                                %                     disp('end reflect')
+                                Pow_Out=[meas_dif,sum_forwardscat,cut_off,I_trans,b2h];
+                                dif_endref=I_1-sum(Pow_Out);
+                                [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_1,Pow_Out,SystemParam,'End Reflect',0,Global_Index,Tally);
+                                ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
+                                ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
+                                
+                                %set the just used I_in to 0
+                                I_in(1,while_num)=0;
+                                
+                                %update the while counter
+                                while_num=while_num+1;
+                                
+                                if while_num<(max_loop)%more than one while loop remaining
+                                    %sort all of the remaining in descending order so the
+                                    %highest intensity ones are prioritized
+                                    [I_in(1,while_num:end),sort_Index]=sort(I_in(while_num:end),'descend');
+                                    sort_Index=sort_Index+(while_num-1);
+                                    Theta_in(1,while_num:end)=Theta_in(1,sort_Index);
+                                    P_in(while_num:end,1)=P_in(sort_Index,1);P_in(while_num:end,2)=P_in(sort_Index,2);
+                                    Direction_in(1,while_num:end)=Direction_in(1,sort_Index);
+                                end
+                                
+                                %if the loop cuts off with anything remaining in it
+                                if while_num==(2+(SystemParam.maxbounce*SystemParam.scatnum)) && any(I_in)%these conditions shouldn't occur BUT
+                                    ray.cutoffpow(aa,xx,yy)=sum(I_in)+ray.cutoffpow(aa,xx,yy);
+                                end
+                                
+                                meas_dif_final=sum(meas.inten)-meas_start0;
+                                b2h_final=ray.b2hpow(aa,xx,yy)-b2h0;
+                                cutoff_final=ray.cutoffpow(aa,xx,yy)-cutoff0;
+                                trans_final=ray.transmitted(aa,xx,yy)-trans0;
+                                abs_final=ray.absorbed(aa,xx,yy)-abs0;
+                                smaabs_final=ray.SMAabs(aa,xx,yy)-smaabs0;
+                                approx_final=ray.approxpow(aa,xx,yy)-approx0;
+                                back_final=ray.backscat(aa,xx,yy)-back0;
+                                %                     disp('while loop')
+                                %                     start=[I_0,meas_start0,b2h0,cutoff0,trans0,abs0,smaabs0,approx0]
+                                Pow_out=[sum_forwardscat,meas_dif_final,b2h_final,cutoff_final,trans_final,abs_final,smaabs_final,approx_final,back_final];
+                                %                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
+                                [Tally,~,~] =  DifTrack(I_0,Pow_Out,SystemParam,'while loop',0,Global_Index,Tally);
+                                
                             end
-
-                            %new loop assigned rays
-                            I_in(1,indices_assign(1):indices_assign(highest_index))=I_scat(sort_scat);
-                            Theta_in(1,indices_assign(1):indices_assign(highest_index))=Theta_scat(sort_scat);
-                            P_in(indices_assign(1):indices_assign(highest_index),1)=P_1(1);P_in(indices_assign(1):indices_assign(end),2)=P_1(2);%all will have same initial point
-                            Direction_in(1,indices_assign(1):indices_assign(highest_index))=direction;
-                            sum_forwardscat=sum(I_scat(sort_scat));
-                        else
-                            sum_forwardscat=0;
-
+                            %summing all of the measured side emitted power
                         end
-                        %update the starting index
-                        st_index=end_index+1;
-                    else%if we've already had the max number of bounces, just record the transmitted and/or lost light
-                        [I_scat,~,I_trans,~,b2h,~,Tally,meas]= EndReflect(I_1,V_1,P_1,SystemParam,direction,bounce_num,Global_Index,Tally,meas);
-                        ray.transmitted(aa,xx,yy)=ray.transmitted(aa,xx,yy)+I_trans;
-                        ray.b2hpow(aa,xx,yy)=b2h+ray.b2hpow(aa,xx,yy);%record and save
-                        %record what isn't being tracked
-                        ray.cutoffpow(aa,xx,yy)=sum(I_scat)+ray.cutoffpow(aa,xx,yy);
-                        sum_forwardscat=0;
-                    end
-                    %check if there's any major differences in the total
-                    meas_dif=sum(meas.inten)-meas_start2;
-                    [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_1,[meas_dif,sum(I_scat),I_trans,b2h],SystemParam,'End Reflect',0,Global_Index,Tally);
-                    ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
-                    ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
-                    
-                    %set the just used I_in to 0
-                    I_in(1,while_num)=0;
-
-                    %update the while counter
-                    while_num=while_num+1;
-                    if while_num<(max_loop)%more than one while loop remaining
-                        %sort all of the remaining in descending order so the
-                        %highest intensity ones are prioritized
-                        [I_in(1,while_num:end),sort_Index]=sort(I_in(while_num:end),'descend');
-                        sort_Index=sort_Index+(while_num-1);
-                        Theta_in(1,while_num:end)=Theta_in(1,sort_Index);
-                        P_in(while_num:end,1)=P_in(sort_Index,1);P_in(while_num:end,2)=P_in(sort_Index,2);
-                        Direction_in(1,while_num:end)=Direction_in(1,sort_Index);
-                    end
-                    
-                    %if the loop cuts off with anything remaining in it
-                    if while_num==(2+(SystemParam.maxbounce*SystemParam.scatnum)) && any(I_in)%these conditions shouldn't occur BUT
-                        ray.cutoffpow(aa,xx,yy)=sum(I_in)+ray.cutoffpow(aa,xx,yy);
-                    end
-
-                    meas_dif_final=sum(meas.inten)-meas_start0;
-                    b2h_final=ray.b2hpow(aa,xx,yy)-b2h0;
-                    cutoff_final=ray.cutoffpow(aa,xx,yy)-cutoff0;
-                    trans_final=ray.transmitted(aa,xx,yy)-trans0;
-                    abs_final=ray.absorbed(aa,xx,yy)-abs0;
-                    smaabs_final=ray.SMAabs(aa,xx,yy)-smaabs0;
-%                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
-                    [Tally,~,~] =  DifTrack(I_0,[meas_dif_final,sum_forwardscat,b2h_final,cutoff_final,trans_final,abs_final,smaabs_final],SystemParam,'while loop',0,Global_Index,Tally);
-
-                end
-                %summing all of the measured side emitted power
-                
-                ray.pow_side(aa,xx,yy)=sum(meas.inten);
+                ray.pow_side(aa,xx,yy)=sum(meas.inten)-MEAS0;
+%                 disp('total while loop')
                 total_pow_use=[ray.pow_side(aa,xx,yy),ray.transmitted(aa,xx,yy),ray.SMAabs(aa,xx,yy),ray.b2hpow(aa,xx,yy),ray.backscat(aa,xx,yy),ray.absorbed(aa,xx,yy),ray.cutoffpow(aa,xx,yy)];
                 
                 %tracking differences
@@ -570,37 +620,59 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
             meas_inten_aa=cell2mat(aa_Rand(1).meas_inten(:,aa));
                 if any(meas_inten_aa)
                     disp('any')
-                       [XVEC,Y, lengthPlot,pow_side_total] = Bins(meas_point_aa, meas_inten_aa, SystemParam.division, xlen, r_fiber);
-                    use_index=find(meas.points(:,1)>=(2.5*10^4));%indexes of all of the measurement points that correspond to measurable light after the sma
+                       [XVEC,Y, lengthPlot,pow_side_total] = Bins(meas_point_aa, meas_inten_aa, SystemParam.division, xlen, r_fiber,SystemParam);
+                    use_index=find(meas_point_aa(:,1)>=(2.5*10^4));%indexes of all of the measurement points that correspond to measurable light after the sma
                     water_st_index=find(meas_point_aa(:,1)>=SystemParam.waterstart);
                     SMA_index=find(meas_point_aa(:,1)<=SystemParam.SMA_totallength);
-                    pow_side_use=sum(meas_inten_aa(use_index));
-                    SMA_pow_side=sum(meas_inten_aa(SMA_index));
+                    pow_side_use=sum(meas_inten_aa(use_index));%*(2*pi*(SystemParam.r_fib*10^-4)*((SystemParam.;
+                    SMA_pow_side=sum(meas_inten_aa(SMA_index));%*;
                     pow_side_waterst=sum(meas_inten_aa(water_st_index));
+                    dAwater=((SystemParam.xlen*10^-4)-(SystemParam.waterstart*10^-4))*2*pi*(SystemParam.r_fiber*10^-4);
+                    record_pow=pow_side_waterst*dAwater
                     %performance metric parameters
                     aa_Rand(1).Y(aa,1)=Y;
                     Ylocal=cell2mat(Y);%local version of the I(x) vector
                     aa_Rand(1).UC(1,aa)=Ylocal(i6)/Ylocal(i1);
                 else
-                pow_side_total=0;
-                pow_side_use=0;
-                SMA_pow_side=0;
-                pow_side_waterst=0;
-                %performance metric parameters
-                Ylocal=zeros(1,(floor((SystemParam.xlen/10e3)/(SystemParam.division/10e3))+1));%local version of the I(x) vector
-                aa_Rand(1).UC(1,aa)=0;
-                aa_Rand(1).Y(aa,1)={Ylocal};
+                    incr=SystemParam.division*10^-4;
+                    if SystemParam.SMA==1
+                    num_max = floor(((xlen/10e3)-(SystemParam.SMA_totallength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+                
+                    XVEC = zeros(1,num_max+2);    
+                %first two measurement points will be within the SMA flush length
+                Inc1=SystemParam.SMA_flushlength*10^-4;
+                Inc2=(SystemParam.SMA_totallength-SystemParam.SMA_flushlength)*10^-4;
+                
+                %first two points have irregular indexes if a part of the sma connector
+                XVEC(1)=-(Inc2+Inc1);
+                XVEC(2)=-Inc1;
+                XVEC(3:end)=0:incr:(incr*(num_max-1));
+                    else
+                      num_max = floor((xlen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+
+                        XVEC=0:incr:(incr*(num_max-1));
+                    end
+                    pow_side_total=0;
+                    pow_side_use=0;
+                    SMA_pow_side=0;
+                    pow_side_waterst=0;
+                    %performance metric parameters
+                    Ylocal=zeros(1,(floor((SystemParam.xlen/10e3)/(SystemParam.division/10e3))+1));%local version of the I(x) vector
+                    aa_Rand(1).UC(1,aa)=0;
+                    aa_Rand(1).Y(aa,1)={Ylocal};
                 end
         %update aa_lim storage
         %summing storage
         
         aa_Rand(1).Pow_enter(1,aa)=sum(ray.Pow_enter(aa,:,:),'all');
         aa_Rand(1).transmitted(1,aa)=sum(ray.transmitted(aa,:,:),'all');
+        trans_pow=aa_Rand(1).transmitted(1,aa).*pi*(SystemParam.r_fiber*10^-4)^2
+
         aa_Rand(1).RatioIsIt(aa,xx,yy)=aa_Rand(1).pow_side(1,aa)/aa_Rand(1).transmitted(1,aa);
         aa_Rand(1).pow_side(1,aa)=pow_side_total;
         aa_Rand(1).pow_side_use(1,aa)=pow_side_use;
         aa_Rand(1).SMA_pow_side(1,aa)=SMA_pow_side;
-        aa_Rand(1).pow_side_waterst(1,aa)=pow_side_waterst(1,aa);
+        aa_Rand(1).pow_side_waterst(1,aa)=pow_side_waterst;
         aa_Rand(1).absorbed(1,aa)=sum(ray.absorbed(aa,:,:),'all');
         aa_Rand(1).backscat(1,aa)=sum(ray.backscat(aa,:,:),'all');
         aa_Rand(1).SMAabs(1,aa)=sum(ray.SMAabs(aa,:,:),'all');
@@ -624,18 +696,18 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         %storing average data 
         FibIt(1).Pow_enter(iteration,h)=mean(aa_Rand(1).Pow_enter(1,:));
         FibIt(1).transmitted(iteration,h)=mean(aa_Rand(1).transmitted(1,:));
-        FibIt(1).pow_side(1,aa)=mean(aa_Rand(1).pow_side(1,:));
-        FibIt(1).pow_side_use(1,aa)=mean(aa_Rand(1).pow_side_use(1,:));
-        FibIt(1).SMA_pow_side(1,aa)=mean(aa_Rand(1).SMA_pow_side(1,:));
-        FibIt(1).pow_side_waterst(1,aa)=mean(aa_Rand(1).pow_side_waterst(1,:));
-        FibIt(1).absorbed(1,aa)=mean(aa_Rand(1).absorbed(1,:));
-        FibIt(1).backscat(1,aa)=mean(aa_Rand(1).backscat(1,:));
-        FibIt(1).SMAabs(1,aa)=mean(aa_Rand(1).SMAabs(1,:));
-        FibIt(1).approxpow(1,aa)=mean(aa_Rand(1).approxpow(1,:));
-        FibIt(1).approxpow_dif(1,aa)=mean(aa_Rand(1).approxpow_dif(1,:));
-        FibIt(1).approxpow_pos(1,aa)=mean(aa_Rand(1).approxpow_pos(1,:));
-        FibIt(1).b2hpow(1,aa)=mean(aa_Rand(1).b2hpow(1,:));
-        FibIt(1).cutoffpow(1,aa)=mean(aa_Rand(1).cutoffpow(1,:));
+        FibIt(1).pow_side(iteration,h)=mean(aa_Rand(1).pow_side(1,:));
+        FibIt(1).pow_side_use(iteration,h)=mean(aa_Rand(1).pow_side_use(1,:));
+        FibIt(1).SMA_pow_side(iteration,h)=mean(aa_Rand(1).SMA_pow_side(1,:));
+        FibIt(1).pow_side_waterst(iteration,h)=mean(aa_Rand(1).pow_side_waterst(1,:));
+        FibIt(1).absorbed(iteration,h)=mean(aa_Rand(1).absorbed(1,:));
+        FibIt(1).backscat(iteration,h)=mean(aa_Rand(1).backscat(1,:));
+        FibIt(1).SMAabs(iteration,h)=mean(aa_Rand(1).SMAabs(1,:));
+        FibIt(1).approxpow(iteration,h)=mean(aa_Rand(1).approxpow(1,:));
+        FibIt(1).approxpow_dif(iteration,h)=mean(aa_Rand(1).approxpow_dif(1,:));
+        FibIt(1).approxpow_pos(iteration,h)=mean(aa_Rand(1).approxpow_pos(1,:));
+        FibIt(1).b2hpow(iteration,h)=mean(aa_Rand(1).b2hpow(1,:));
+        FibIt(1).cutoffpow(iteration,h)=mean(aa_Rand(1).cutoffpow(1,:));
         FibIt(1).remaininglosses=mean(aa_Rand(1).remaininglosses);
 
         %std deviations
@@ -705,8 +777,7 @@ pie(Power_Track_comp,Power_Track_comp_lab)
 figure(3)
 %title and legend defined earlier lines 95 is through 140ish
 Y_current=cell2mat(FibIt(1).Y(iteration,h));%current I(x) within this iteration and fiber
-X=Xvec-(SystemParam.SMA_totallength/10^4);%starting our X vector at the end of the SMA connector
-plot(X,Y_current)
+plot(XVEC,Y_current)
 title(Title_Main) %defined earlier 
 hold on
 if yes_itname==1%if we need a legend bc there's multiple iterations
@@ -823,15 +894,15 @@ summary(trouble_main) %get a summary of all of the trouble areas in the main cod
 
 IO_idfun=find(IO_bigfun~="");
     if sum(IO_dif_fun,'all')==sum(IO_dif_fun(IO_idfun),'all')
-        IO_bigfun=IO_bigfun(IO_idfun)
-        IO_fun_cats=unique(IO_bigfun)%create a category of each unique function reported with a big dif
+        IO_bigfun=IO_bigfun(IO_idfun);
+        IO_fun_cats=unique(IO_bigfun);%create a category of each unique function reported with a big dif
         IO_trouble_functions=categorical(IO_bigfun,IO_fun_cats);%,fun_categorical);
     else
         error('figure out the indexing issues')
     end
-IO_idmain=find(IO_bigmain~="")    
-IO_main_cats=unique(IO_bigmain(IO_idmain))%create a category of each unique function reported with a big dif
-summary(IO_trouble_functions)%get a summary of all of the trouble functions
+IO_idmain=find(IO_bigmain~="");%    ;
+IO_main_cats=unique(IO_bigmain(IO_idmain));%create a category of each unique function reported with a big dif
+summary(IO_trouble_functions);%get a summary of all of the trouble functions
 IO_trouble_main=categorical(IO_bigmain,IO_main_cats);%main_categorical);
 summary(IO_trouble_main) %get a summary of all of the trouble areas in the main code
 
@@ -936,6 +1007,8 @@ IO_TabF=table(IO_Changed,IO_Total,'RowNames',IO_Function)
             writematrix("Total remaining light loss: " + FibIt(1).remaininglosses(iteration,h) + " (uW)", filename,'Sheet', sheet_num + (h-1),'Range', "P" + num2str((6*iteration)-3));
             writematrix("Avg Uniformity Cofficient: " + FibIt(1).UC(iteration,h), filename,'Sheet', sheet_num + (h-1),'Range', "Q" + num2str((6*iteration)-3));
             writematrix("Avg Is/It Ratio: " + FibIt(1).RatioIsIt(iteration,h) , filename,'Sheet', sheet_num + (h-1),'Range', "R" + num2str((6*iteration)-3));
+            writematrix("Total water st side emitted light: " + FibIt(1).pow_side_waterst(iteration,h) + " (uW)", filename,'Sheet', sheet_num + (h-1),'Range', "S" + num2str((6*iteration)-3));
+
             %documentation of the std deviation of the generated data
             writematrix(FibIt(2).Pow_enter(iteration,h) + " (uW)", filename,'Sheet', sheet_num + (h-1),'Range', "E" + num2str((6*iteration)-2));
             writematrix(FibIt(2).transmitted(iteration,h) + " (uW)", filename,'Sheet', sheet_num + (h-1),'Range', "F" + num2str((6*iteration)-2));
@@ -951,6 +1024,8 @@ IO_TabF=table(IO_Changed,IO_Total,'RowNames',IO_Function)
             writematrix(FibIt(2).remaininglosses(iteration,h) + " (uW)", filename,'Sheet', sheet_num + (h-1),'Range', "P" + num2str((6*iteration)-2));
             writematrix(FibIt(2).UC(iteration,h), filename,'Sheet', sheet_num + (h-1),'Range', "Q" + num2str((6*iteration)-2));
             writematrix(FibIt(2).RatioIsIt(iteration,h) , filename,'Sheet', sheet_num + (h-1),'Range', "R" + num2str((6*iteration)-2));
+            writematrix(FibIt(2).pow_side_waterst(iteration,h), filename,'Sheet', sheet_num + (h-1),'Range', "S" + num2str((6*iteration)-2));
+
             %side emission over a the fiber distance and iteration
             writematrix(XVEC,filename,'Sheet', sheet_num + (h-1),'Range', "A" + num2str((6*iteration)-1));
             writematrix(cell2mat(FibIt(1).Y(iteration,h)),filename,'Sheet', sheet_num + (h-1),'Range', "A" + num2str((6*iteration)));
@@ -961,5 +1036,3 @@ IO_TabF=table(IO_Changed,IO_Total,'RowNames',IO_Function)
 
 end
 hold off
-
-

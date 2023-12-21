@@ -29,12 +29,15 @@ classdef SysParam
         alpha_r;      %coefficient used in determining amount of rayleigh scattering in glass fiber
         RayleighCoeff;      %coefficient used to determine total loss for entire distance of the fiber
         alpha_uv;           %coefficient used in determining amount of UV absorption occurs in glass fiber
+        alpha;              %total loss coefficient of the optical fiber
+        r_coeff;            %proportion of total loss going to rayleigh scattering
         num_fib;            %numble of fibers in bundle
         photon_min;         %energy per photon in Joules
         raynum;             %number of rays from led emission
         angnum;             %number of angles looked at from led emission
         waterstart;         %location at which water interface starts
         waterInterface;     %if there is a water interface
+        sealed_SMA;         %is the SMA filled w cytop
         metal_abs;          %percentage of light absorbed by SMA connector metal
         division;           %length of division for data display
         scatnum;            %number of scatter rays produced by end reflect
@@ -51,5 +54,14 @@ classdef SysParam
         SMA_diam;
         scatter_coeff;
         dif_tol;
+        
+        %added on 8/31/23
+        lossy_f=1;%if the fiber is considered lossy
+        lossy_m=1;%if the medium is considered lossy
+        n_metal;%refractive index of the metal as estimated from https://pubs-aip-org.ezproxy1.lib.asu.edu/aip/jap/article/53/9/6340/308961/Optical-constants-and-spectral-selectivity-of
+        c;%speed of light
+        ang_freq;%angular frequency
+        k_cytop;%attenuation of the cytop
+        SMA_fill; %length the sma connector is filled to
     end
 end

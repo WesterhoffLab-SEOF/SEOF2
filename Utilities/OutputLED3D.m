@@ -4,11 +4,14 @@ LED_height=SystemParam.LEDd*10^3;%(um)
 LED_width=SystemParam.LEDd*10^3;%(um)
 LEDang=SystemParam.LEDa;
 Half_t=SystemParam.Half_t;
-I_init=SystemParam.I_init;%mW
+P_init=SystemParam.I_init;%mW
 num_rays=SystemParam.raynum; %number of total rays
 num_theta=SystemParam.angnum;%angle fibelity
 radialIndex=round(num_rays/num_theta);%indexes
 angularIndex=num_theta;%indexes
+A=(LED_height*10^-4)*(LED_width*10^-4);
+I_init=P_init/A;%mW
+dA=((LED_height*10^-4)/radialIndex)*((LED_width*10^-4)/radialIndex);%area in cm^2
 %origin of each ray location
 Ray_Y=linspace(-LED_height/2,LED_height/2,radialIndex);
 Ray_X=linspace(-LED_width/2,LED_width/2,radialIndex);
@@ -44,4 +47,3 @@ Intensity=Intensity/sum(sum(sum(sum(Intensity))));
 Intensity=Intensity.*I_init;%4D intensity that sums to the total I_init
 
 end
-

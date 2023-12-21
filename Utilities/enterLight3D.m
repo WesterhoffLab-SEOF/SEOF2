@@ -86,22 +86,14 @@ for q=1:g
 %         incoming_int(k,i,q)=sum(Entering_Int(k,:,i,:),'all');%total amount of intensity entering
 %         incoming_ang(k,i,q)=sum(Entering_angle(k,:,i,:),'all')/(b*d);%average angle
         vi=[cos(incoming_ang(k,i,q)),sin(incoming_ang(k,i,q))];%entering direction vector
-
-        [theta_i,theta_t,theta_c,~,~,~,~] = Snells(vi,nhat,ni,nt,horz_surf,direction);
-        [~,Ent_Int(k,i,q)]=FresnelEq(incoming_int(k,i,q),SystemParam,theta_i,theta_t,theta_c,ni,nt);
+        [theta_i,theta_t,theta_c,theta_ih,~,~,~,~] = Snells(vi,nhat,ni,nt,horz_surf,direction);
+        [~,Ent_Int(k,i,q)]=FresnelEq(incoming_int(k,i,q),SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
         y0(k,i,q)=sign(Ray_X(i))*sum(sum(Entering_rad(k,:,i,:)))/(b*d);%average y0
         Theta(k,i,q)=sign(alpha_ang(k))* theta_t;
         end
     end
+    
     perc_hit(q)=sum(sum(incoming_int(:,:,q)))/I_init;
     perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/I_init;    
+end              
 end
-
-
-    
-
-
-                    
-                    
-end
-
