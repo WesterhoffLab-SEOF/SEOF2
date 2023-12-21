@@ -11,6 +11,10 @@ SMAFL=SystemParam.SMA_flushlength;%=1*10^4;%the length of the SMA connector that
             n_medium=SystemParam.n2;
             k_medium=SystemParam.kair;
             transmission=1;
+        elseif SystemParam.sealed_SMA==1 && x <= SystemParam.SMA_fill %if we're within the sma connector fill portion and its sealed w cytop
+            n_medium=SystemParam.n4;
+            k_medium=SystemParam.k_cytop;
+            transmission=1;
         elseif SystemParam.waterInterface==1 && x < SystemParam.waterstart
             %if there is water, but we haven't reached it, then make sure it's
             %the air RI
