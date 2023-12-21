@@ -49,9 +49,9 @@ end
 [I_reflect,Itrans]=FresnelEq(I_in,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
 %check there isn't a large difference after using the fresnell eq. keep
 %track in Tally struct
-[Tally,~,~] =  DifTrack(I_in,[I_reflect,Itrans],SystemParam,'FresnelEq w/in EndReflect',1,Global_Index,Tally);
-[Tally,~,~] =  inOutTrack(I_in,Itrans,SystemParam,'FresnelEq w/in EndReflect',1,Global_Index,Tally);
-fres_dif=I_in-sum([I_reflect,Itrans]);
+% % [Tally,~,~] =  DifTrack(I_in,[I_reflect,Itrans],SystemParam,'FresnelEq w/in EndReflect',1,Global_Index,Tally);
+% % [Tally,~,~] =  inOutTrack(I_in,Itrans,SystemParam,'FresnelEq w/in EndReflect',1,Global_Index,Tally);
+% % fres_dif=I_in-sum([I_reflect,Itrans]);
 if directioni==1%hitting the end of the fiber
     I_trans=Itrans;%transmitted light will go into the medium
     b2h=0;
@@ -67,13 +67,13 @@ I_scat=I_scatter.*I_reflect;
 ref_dif=I_reflect-sum(I_scat);
 %check there isn't a large difference after scattering. keep
 %track in Tally struct
-[Tally,~,~] =  DifTrack(I_reflect,I_scat,SystemParam,'scatter_cone inside EndReflect',1,Global_Index,Tally);
+% % [Tally,~,~] =  DifTrack(I_reflect,I_scat,SystemParam,'scatter_cone inside EndReflect',1,Global_Index,Tally);
 
 %update number of bounces
 bounce_num=bounce_num+1;
 pow_in=I_in;
 pow_out=[(sum(meas.inten)-Meas0),I_scat,I_trans,b2h];
 scat_dif=pow_in-sum(pow_out);
-[Tally,~,~] =  DifTrack(I_in,[(sum(meas.inten)-Meas0),I_scat,I_trans,b2h],SystemParam,'EndReflect total',1,Global_Index,Tally);
+% % [Tally,~,~] =  DifTrack(I_in,[(sum(meas.inten)-Meas0),I_scat,I_trans,b2h],SystemParam,'EndReflect total',1,Global_Index,Tally);
 
 end
