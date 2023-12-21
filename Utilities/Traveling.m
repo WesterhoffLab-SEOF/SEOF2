@@ -167,7 +167,7 @@ while condition && I>=I_min
 
             %put side emitted light into the measure function
             if any(I_sideemit)%if there is side emitted light
-                meas_0=sum(meas.inten);cutoff0=IT.cutoffi;abs0=IT.absorbi;house0=IT.housi;approx0=IT.approxi;back0=IT.backi;trans0=IT.transi;b2h0=IT.b2hi;
+% %                 meas_0=sum(meas.inten);cutoff0=IT.cutoffi;abs0=IT.absorbi;house0=IT.housi;approx0=IT.approxi;back0=IT.backi;trans0=IT.transi;b2h0=IT.b2hi;
             [I_return_m,~,~,IT,Tally,meas]=meas_SMA_check(I_sideemit_in,I_sideemit,0,V_sideemit,V_reflect,P_sidemit,SystemParam,IT,Tally,meas,Global_Index);
             if isnan(I_return_m)
                 error('isNaN')
@@ -275,7 +275,7 @@ while condition && I>=I_min
             elseif any(I_sideemit_calc)%if there's not side emitted light but there could have been
                 %then that light has been lost to the housing
                 IT.housi=I_sideemit_calc+IT.housi;
-            elseif ~any(I_sideemit_in)&& I_sideemit_in~=0
+            elseif ~any(I_sideemit_in)&& I_sideemit~=0
 %                 disp(I_sideemit_in)
 %                 disp(I_sideemit)
 %                 disp(I_sideemit_calc)
@@ -300,36 +300,36 @@ while condition && I>=I_min
 
             %now can calculate reflected and transmitted light using the
             %fresnell eq
-            if I_in <=SystemParam.I_min 
-%                 tvec_check=t_sort
-%                 t_check=t
-%                 t_id_check=t_id
-%                 x_check=x
-%                 t_std_check=t_std 
-%                 tb_x_check=tb_x
-%                 tb_y_check=tb_y
-%                 dx_check=dx
-%                 dy_check=dy
-%                 dr_check=dr
-%                 I_min_check=SystemParam.I_min
-%                 I_starting=I
-%                 V_starting=V
-%                 P_starting=P
-%                 ni_cur=ni
-%                 nt_cur=nt
-%                 P_in_cur=P_in
-%                 theta_i_calc=theta_i
-%                 theta_t_calc=theta_t
-%                 I_in_tofres=I_in
-%                 Tco1=Tco
-%                 I_Rem=I_remaining
-%                 I_side_calc=I_sideemit_calc
-%                 I_check_in_side=I_sideemit_in
-%                 i_SIDEEMIT=I_sideemit
-%                 V_ref=V_reflect
-%                 V_trans=V_transmit
-%                 P_side=P_sidemit
-%                 V_side=V_sideemit
+            if I_in <0%=SystemParam.I_min 
+                tvec_check=t_sort
+                t_check=t
+                t_id_check=t_id
+                x_check=x
+                t_std_check=t_std 
+                tb_x_check=tb_x
+                tb_y_check=tb_y
+                dx_check=dx
+                dy_check=dy
+                dr_check=dr
+                I_min_check=SystemParam.I_min
+                I_starting=I
+                V_starting=V
+                P_starting=P
+                ni_cur=ni
+                nt_cur=nt
+                P_in_cur=P_in
+                theta_i_calc=theta_i
+                theta_t_calc=theta_t
+                I_in_tofres=I_in
+                Tco1=Tco
+                I_Rem=I_remaining
+                I_side_calc=I_sideemit_calc
+                I_check_in_side=I_sideemit_in
+                i_SIDEEMIT=I_sideemit
+                V_ref=V_reflect
+                V_trans=V_transmit
+                P_side=P_sidemit
+                V_side=V_sideemit
                 error('I_in for fresnell case 3 <I_min')
             end
             [I_reflect_calc,I_transmit_calc]=FresnelEq(I_in,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
