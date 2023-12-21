@@ -268,7 +268,7 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
          %track amt lost to metal
         I_bounceloss=I_lost_m+I_bounceloss;%loss amount
 
-         [Tally,~,~] =  DifTrack(I_bounce,[I_reflect_m,I_lost_m,I_bounce*(1-kloss1)],SystemParam,'BounceLoss w/in meas_SMA_check',1,Global_Index,Tally);
+% %          [Tally,~,~] =  DifTrack(I_bounce,[I_reflect_m,I_lost_m,I_bounce*(1-kloss1)],SystemParam,'BounceLoss w/in meas_SMA_check',1,Global_Index,Tally);
 %rest the direction calculations for the travel distance back to the fiber
 %using reflected metal vel
         dySMA=sign(V_reflectm(2))*((SMA_d/2)-SystemParam.r_fiber);%distance in the direction of travel to what would be the sma edhge
