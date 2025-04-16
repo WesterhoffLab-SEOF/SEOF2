@@ -30,8 +30,8 @@ mu_t=1;%mu_t/mu_0;
 
 nf_i=a_f*c/(2*ang_freq);%imaginary portion of complex RI/ extinction coefficient
 if any(imag(ni1))
+    ni2=imag(ni1);%%%%%%%%%%%%%%%%%%%
     ni1=real(ni1);
-    ni2=imag(ni1);
     lossy_i=lossy_m;
 elseif ni1==real(SystemParam.n5)
     a_med=SystemParam.k*10^2;
@@ -53,8 +53,8 @@ else
 end
 % % check=0;
 if any(imag(nt1))
-    nt1=real(nt1);
     nt2=imag(nt1);
+    nt1=real(nt1);
     lossy_t=lossy_m;
 % %     check=1;
 elseif nt1==real(SystemParam.n1)
@@ -76,6 +76,7 @@ elseif nt1==real(SystemParam.n4)
     lossy_t=lossy_m;
 else
 % %     check=3;
+    disp(nt1)
     error('need more comprehensive coding of complex RI')
 end
 
@@ -217,3 +218,5 @@ end
         E_wave_p=ev_fact.*tp.*I_reflect;
         E_wave_s=ev_fact.*ts.*I_reflect.*[0,0,1];%going in z direction
 end
+
+        

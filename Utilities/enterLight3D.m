@@ -2,20 +2,21 @@ function [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Enterin
 %variables from system parameters
 nt = SystemParam.n1;              % RI of Quartz Optical Fiber %refracted index
 ni = SystemParam.n2;              % RI of "gap"/air %air index
-I_init = SystemParam.I_init;          % LED intensity, 50 mW
+%I_init = SystemParam.I_init;          % LED intensity, 50 mW
         nhat=[-1 0];%surface of fiber is the flat cut end
         horz_surf=0;%not a horizontal surface
         direction=1;
+        %Ray_X and Ray_Y use (um), as does circles
 %r_fiber=SystemParam.rfiber; 
-k_air = SystemParam.kair*10^-1; %estimated light attenuation constant (1/mm)https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
-LED_dist=led_d;
+k_air = SystemParam.kair*10^-4; %estimated light attenuation constant (1/cm)->(1/um) https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
+LED_dist=led_d;%*10^-3;%;mm
 [a,b,c,d]=size(Intensity_mat);
 [e,f,g]=size(circles);
-r_fiber=r_fib*10^-3;
+r_fiber=r_fib;%*10^-3;%um>mm
 imageSizeX=e;
 imageSizeY=f;
 center_image=[round(imageSizeX/2),round(imageSizeY/2)];
-
+I_init=sum(Intensity_mat,'all');
 %empty vector set ups
 Ent_Int=zeros(a,c,g);
 Theta=zeros(a,c,g);
@@ -33,6 +34,7 @@ for q=1:g
 %empty vector set ups for within each fiber
     Entering_Int=zeros(a,b,c,d);
     Inc_Int=zeros(a,b,c,d);
+    Loss_Inc=zeros(a,b,c,d);
     Entering_angle=zeros(a,b,c,d);
     Entering_X=zeros(a,b,c,d);
     Entering_Y=zeros(a,b,c,d);
@@ -54,7 +56,8 @@ for q=1:g
                     Ynew=round(dir_vec(2)*(Znew/dir_vec(3)))+Ray_Y(j);
                     Xnew=round(dir_vec(1)*(Znew/dir_vec(3)))+Ray_X(i);
                     %Inc_Int(k,l,i,j)=%Intensity_mat(k,l,i,j)./(4*pi*norm([Xnew,Ynew,Znew]-Pos_i_ray).^2);
-                    Inc_Int(k,l,i,j)=Intensity_mat(k,l,i,j)*exp(-k_air*norm([Xnew,Ynew,Znew]-Pos_i_ray));%norm([Xnew,Ynew,Znew]-Pos_i_ray)*10^-1);%light intensity after attenuation in air
+                    Loss_Inc(k,l,i,j)=exp(-k_air*norm([Xnew,Ynew,Znew]-Pos_i_ray));
+                    Inc_Int(k,l,i,j)=Intensity_mat(k,l,i,j).*Loss_Inc(k,l,i,j);%norm([Xnew,Ynew,Znew]-Pos_i_ray)*10^-1);%light intensity after attenuation in air
                     
                     %check if the light hits a fiber by using the boolean
                     %image
@@ -62,6 +65,12 @@ for q=1:g
                     %image
                     X_trans=Xnew+center_image(1);
                     Y_trans=Ynew+center_image(2);
+                    if round(X_trans)==0 %image pixel index starts at 1
+                        X_trans=1;
+                    elseif round(Y_trans)==0 %image pixel index starts at 1
+                        Y_trans=1;
+                    end
+                    if (X_trans>0 && X_trans<=e) && (Y_trans>0 && Y_trans<=f) %if both of the position values are within the image range (outside also things wont hit_
                     if circles(round(X_trans),round(Y_trans),q)==1
                         %3d storage
                         light_entering(1,q)=light_entering(1,q)+Inc_Int(k,l,i,j);
@@ -72,12 +81,14 @@ for q=1:g
                          %flattening to 2-D
                         Entering_rad(k,l,i,j)=sqrt(Xnew^2+Ynew^2);
                         
-                     end
+                    end
+                    end
                 end
             end
         end
     end
-    
+    total_entering_int=sum(Entering_Int,'all');
+    light_ent_check=light_entering(1,q);
     %flattening to 2D for each fiber
     for i=1:c
         for k=1:a
@@ -92,8 +103,17 @@ for q=1:g
         Theta(k,i,q)=sign(alpha_ang(k))* theta_t;
         end
     end
-    
-    perc_hit(q)=sum(sum(incoming_int(:,:,q)))/I_init;
-    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/I_init;    
-end              
+    total_act_Ent_Int=sum(Ent_Int(:,:,q),'all');
+    I_init_check=I_init;
+     perc_hit(q)=total_entering_int/I_init;%perc_hit(q)=sum(sum(incoming_int(:,:,q)))/I_init;
+     perc_ent(q)=total_act_Ent_Int/I_init;%sum(Ent_Int(:,:,q),'all')/I_init;  %%    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/I_init;    
 end
+
+
+    
+
+
+                    
+                    
+end
+

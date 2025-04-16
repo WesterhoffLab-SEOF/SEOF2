@@ -133,7 +133,6 @@ I_losstot=I_scatterloss+Absorb_in;
 if isnan(I_remaining)
     error('nan in conttrav')
 elseif ~any(I_remaining)
-    
     error('I remaining is empty')
 end
 % %  Pow_Out=[I_remaining,I_sideemit,(IT.cutoffi-Cutoff0),(IT.absorbi-Abs0),(IT.housi-House0),(IT.approxi-Approx0),(IT.backi-Back0),(IT.transi-Trans0),(IT.b2hi-B2h0)];

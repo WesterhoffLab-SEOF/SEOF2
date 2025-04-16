@@ -21,10 +21,7 @@ IT.approxi=0;
 % %         V_sma_prev=[0,0];
 % % MEAS0=sum(meas.inten);
 % % Istart=I;
-SystemParam.SMA=1;%is there a SMA connector used to couple thhe fiber to the LED? 1 for yes, 0 for no
-SystemParam.SMA_flushlength=1*10^4;%the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
-SystemParam.SMA_totallength=2.5*10^4;%the total length of the SMA connector is 2.5 cm long
-SystemParam.SMA_diam=2.5*10^3;%diameter of SMA connector [mm to um
+
 iteration=Global_Index(1);h=Global_Index(2);aa=Global_Index(3);xx=Global_Index(4);yy=Global_Index(5);
 %univeral parameters
 n1 = SystemParam.n1;%fiber RI
@@ -179,8 +176,9 @@ while condition && I>=I_min
             elseif any(I_sideemit_calc)%if there's not side emitted light but there could have been
                 %then that light has been lost to the housing
                 IT.housi=I_sideemit_calc+IT.housi;
-            else
-                error('trying to measure 0 intensity in case 1')
+            elseif isnan(I_sideemit)
+                error('isNaN')
+                %return
             end
     
             %create return values
@@ -208,7 +206,7 @@ while condition && I>=I_min
             %first need to do snell
             [theta_i,~,~,~,~,~,V_reflect,direction] = Snells(V,nhat,ni,nt,horz_surf,direction);
             [I_remaining,I_sideemit_calc,I_sideemit_in,~,V_sideemit,P_sidemit,IT,Tally]=ContLoss(V,I,P_in,dr,bound,ni,nt,theta_i,SystemParam,Tally,IT,Global_Index);
-            I_sideemit=Tco*I_sideemit_calc;            
+            I_sideemit=Tco*I_sideemit_calc ;           
 % %             Pow_Out=[I_remaining,I_sideemit_calc,(IT.cutoffi-Cutoff0),(IT.absorbi-Abs0),(IT.housi-House0),(IT.approxi-Approx0),(IT.backi-Back0),(IT.transi-Trans0),(IT.b2hi-B2h0)];
 % %             [Tally,~,~] =  DifTrack(I,Pow_Out,SystemParam,'ContLoss w/in case 2',1,Global_Index,Tally);
 % %             [Tally,~,~] =  inOutTrack(I,I_sideemit_calc,SystemParam,'ContLoss w/in case 2',1,Global_Index,Tally);
@@ -228,7 +226,7 @@ while condition && I>=I_min
                 %then that light has been lost to the housing
                 IT.housi=I_sideemit_calc+IT.housi;
             elseif ~any(I_sideemit_in)
-                error('trying to measure 0 intensity in case 1')
+                error('trying to measure 0 intensity in case 2')
             end
             %set up variables to exit the function
             Iend=I_remaining;
@@ -485,3 +483,4 @@ Pend=P;
 Vend=V;
 
 end
+
