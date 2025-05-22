@@ -54,6 +54,7 @@ classdef SysParam
         SMA_diam;
         scatter_coeff;
         dif_tol;
+        scat_front;
         
         %added on 8/31/23
         lossy_f=1;%if the fiber is considered lossy
