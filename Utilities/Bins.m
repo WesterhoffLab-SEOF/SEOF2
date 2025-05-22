@@ -16,13 +16,13 @@ radius=rad*1e-4;%radius in cm
 %within the sma connect is negative, the 0 starts outside the SMA
 %connector)
 if SystemParam.SMA==1
-    num_max = floor(((xlen/10e3)-(SystemParam.SMA_totallength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+    num_max = floor(((xlen/10e3)-(SystemParam.smaTotalLength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
     x2 = zeros(1,num_max+2);
     y2 = zeros(1,num_max+2);
     
     %first two measurement points will be within the SMA flush length
-    Inc1=SystemParam.SMA_flushlength*10^-4;
-    Inc2=(SystemParam.SMA_totallength-SystemParam.SMA_flushlength)*10^-4;
+    Inc1=SystemParam.smaFlushLength*10^-4;
+    Inc2=(SystemParam.smaTotalLength-SystemParam.smaFlushLength)*10^-4;
     
     %first two points have irregular indexes if a part of the sma connector
     x2(1)=-(Inc2+Inc1);

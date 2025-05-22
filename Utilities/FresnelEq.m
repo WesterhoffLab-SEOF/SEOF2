@@ -6,21 +6,21 @@ function [I_reflect,I_transmit]=FresnelEq(I0,SystemParam,theta_i,theta_t,theta_c
 %initial variables needed
 
 %should be able to change if the mediums are lossy in the main function
-lossy_f=SystemParam.lossy_f;
-lossy_m=SystemParam.lossy_m;
+isFiberLossy=SystemParam.isFiberLossy;
+isMediumLossy=SystemParam.isMediumLossy;
 %ang_wavenumber=(2*pi)/SystemParam.wavelength;%[rad/m]
-wavenumber=1/(SystemParam.uv_wavelength*10^-9);%;[m-1]
+wavenumber=1/(SystemParam.uvWavelength*10^-9);%;[m-1]
 c= 299792458;%[m/s] speed of light
-ang_freq=wavenumber*2*pi*c;%[rad/s]
+angularFreq=wavenumber*2*pi*c;%[rad/s]
 %attenuation coefficients in mediums. should be able to get this from a
 %struct and/ or function
 %change this
-% alpha_uv=(0.9);%db/m friom https://www.content.molex.com/dxdam/literature/987650-8936.pdf
-% alpha_r=(1.64*10^-3)*(850/275)^4;%db/m
+% uvAlpha=(0.9);%db/m friom https://www.content.molex.com/dxdam/literature/987650-8936.pdf
+% rayleighAlpha=(1.64*10^-3)*(850/275)^4;%db/m
 
 %complex part of the refractive indexes
-% a_uv=(alpha_uv/10)*log(10);%log(AUV);%(1/m)
-% a_r=(alpha_r/10)*log(10);%;%-log(AR);%(1/m)
+% a_uv=(uvAlpha/10)*log(10);%log(AUV);%(1/m)
+% a_r=(rayleighAlpha/10)*log(10);%;%-log(AR);%(1/m)
 %summed attenuation in fiber
 a_f=456.9589;%(a_uv+a_r);%*10^6;%[1/um*um/m]->[m-1]%for fiber
 %attenuation coefficients in mediums
@@ -28,26 +28,26 @@ a_f=456.9589;%(a_uv+a_r);%*10^6;%[1/um*um/m]->[m-1]%for fiber
 mu_i=1;%;mu_i/mu_0;
 mu_t=1;%mu_t/mu_0;
 
-nf_i=a_f*c/(2*ang_freq);%imaginary portion of complex RI/ extinction coefficient
+nf_i=a_f*c/(2*angularFreq);%imaginary portion of complex RI/ extinction coefficient
 if any(imag(ni1))
     ni2=imag(ni1);%%%%%%%%%%%%%%%%%%%
     ni1=real(ni1);
-    lossy_i=lossy_m;
+    lossy_i=isMediumLossy;
 elseif ni1==real(SystemParam.n5)
     a_med=SystemParam.k*10^2;
-    ni2=a_med*c/(2*ang_freq);
-    lossy_i=lossy_m;
+    ni2=a_med*c/(2*angularFreq);
+    lossy_i=isMediumLossy;
 elseif ni1==real(SystemParam.n1)
     ni2=nf_i;
-    lossy_i=lossy_f;
+    lossy_i=isFiberLossy;
 elseif ni1==real(SystemParam.n2)
-    a_med=SystemParam.kair*10^2;
-    ni2=a_med*c/(2*ang_freq);
-    lossy_i=lossy_m;
+    a_med=SystemParam.kAir*10^2;
+    ni2=a_med*c/(2*angularFreq);
+    lossy_i=isMediumLossy;
 elseif ni1==real(SystemParam.n4)
-    a_med=SystemParam.k_cytop*10^2;
-    ni2=a_med*c/(2*ang_freq);
-    lossy_i=lossy_m;
+    a_med=SystemParam.kCytop*10^2;
+    ni2=a_med*c/(2*angularFreq);
+    lossy_i=isMediumLossy;
 else
     error('need more comprehensive coding of complex RI')
 end
@@ -55,25 +55,25 @@ end
 if any(imag(nt1))
     nt2=imag(nt1);
     nt1=real(nt1);
-    lossy_t=lossy_m;
+    lossy_t=isMediumLossy;
 % %     check=1;
 elseif nt1==real(SystemParam.n1)
     nt2=nf_i;
-    lossy_t=lossy_f;
+    lossy_t=isFiberLossy;
 % %     check=2;
 elseif nt1==real(SystemParam.n5)
     a_med=SystemParam.k*10^2;
-    nt2=a_med*c/(2*ang_freq);
-    lossy_t=lossy_m;
+    nt2=a_med*c/(2*angularFreq);
+    lossy_t=isMediumLossy;
 % %     check=2;
 elseif nt1==real(SystemParam.n2)
-    a_med=SystemParam.kair*10^2;
-    nt2=a_med*c/(2*ang_freq);
-    lossy_t=lossy_m;
+    a_med=SystemParam.kAir*10^2;
+    nt2=a_med*c/(2*angularFreq);
+    lossy_t=isMediumLossy;
 elseif nt1==real(SystemParam.n4)
-    a_med=SystemParam.k_cytop*10^2;
-    nt2=a_med*c/(2*ang_freq);
-    lossy_t=lossy_m;
+    a_med=SystemParam.kCytop*10^2;
+    nt2=a_med*c/(2*angularFreq);
+    lossy_t=isMediumLossy;
 else
 % %     check=3;
     disp(nt1)
@@ -128,8 +128,8 @@ et=(nt1^2-nt2^2)+(2*nt1*nt2)*1i;%complex relative permittivity of the transmitte
     end
 ni=ni1+1i*ni2;
 nt=nt1+1i.*nt2;
-ki=ni;%(ang_freq.*ni./c);
-kt=nt;%(ang_freq.*nt./c);
+ki=ni;%(angularFreq.*ni./c);
+kt=nt;%(angularFreq.*nt./c);
 
 kveci=[real(ki).*sin(theta_i)+(1i.*imag(ki).*cos(atten_ang_i));((real(ki).*cos(theta_i))+(1i.*imag(ki).*sin(atten_ang_i)))];
 % kvecr=[kveci(1);((-1*real(ki).*cos(theta_i))+(1i.*imag(ki).*sin(atten_ang_i)))];

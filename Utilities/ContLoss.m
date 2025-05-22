@@ -12,7 +12,7 @@ ni_c=ni1;
 nt_c=nt1;
 dt=norm(dtrav);
 alpha=SystemParam.alpha;%db/um
-r_coeff=SystemParam.r_coeff;%coefficient of losses attributed to rayleigh
+r_coeff=SystemParam.rayScatterCoeff;%coefficient of losses attributed to rayleigh
 losses=(I_in*(1-10^(-alpha*dt/10)));
 Absorb_in=losses*(1-r_coeff);
 
@@ -25,7 +25,7 @@ IT.absorbi=IT.absorbi+Absorb_in;
 %need to find appropriate indices to get the pre calculated scattering
 %coefficients
 deg=abs(rad2deg(theta_i));
-deg_index=round(SystemParam.ang_div*deg);%index for the angle
+deg_index=round(SystemParam.angleDiv*deg);%index for the angle
 %find the RI index 
 switch ni
     case real(SystemParam.n1)
@@ -36,7 +36,7 @@ switch ni
         ni_index=3;
     case real(SystemParam.n4)
         ni_index=4;
-    case real(SystemParam.nwater)
+    case real(SystemParam.nWater)
         ni_index=5;
     case real(SystemParam.n_metal)
         ni_index=6;
@@ -51,13 +51,13 @@ switch nt
         nt_index=3;
     case real(SystemParam.n4)
         nt_index=4;
-    case real(SystemParam.nwater)
+    case real(SystemParam.nWater)
         nt_index=5;
-    case real(SystemParam.n_metal)
+    case real(SystemParam.nMetal)
         nt_index=6;
 end
 %import the pre calculated scattering coefficients
-scat_coeffs=cell2mat(SystemParam.scatter_coeff(ni_index,nt_index,deg_index));
+scat_coeffs=cell2mat(SystemParam.scatterCoeff(ni_index,nt_index,deg_index));
 %assign the coefficients to appropriate var
 Forward=scat_coeffs(1);Backward=scat_coeffs(2);Sideup=scat_coeffs(3);Sidedown=scat_coeffs(4);Rayloss=scat_coeffs(5);
 %calculate amount of light scattered in each direction

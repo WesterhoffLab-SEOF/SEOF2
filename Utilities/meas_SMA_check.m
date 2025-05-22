@@ -6,7 +6,7 @@ function[I_return,P_return,V_return,IT,Tally,meas]=meas_SMA_check(I_in,I_transmi
 %coating
 %if it's in the right place
 % % Meas0=sum(meas.inten);House0=IT.housi;Absorb0=IT.absorbi;Back0=IT.backi;Cutoff0=IT.cutoffi;
-I_min=SystemParam.I_min;
+intensityMin=SystemParam.intensityMin;
 %standard outputs
 P_return=P;
 I_return=I_reflect;
@@ -14,7 +14,7 @@ V_return=Vref;
 
 %if the transmitted light is functionally 0 (ie emitted into the sma
 %connector flush part, or just very tiny to begin with)
-if I_transmit<=I_min
+if I_transmit<=intensityMin
     %skip any measurements
     %exit the code
     return
@@ -36,15 +36,15 @@ if SystemParam.SMA==0%if there isn't an sma connector then all transmitted light
     return
 end
 %if there is an sma connector, need to  set up for the sma connector
-% metal_abs=SystemParam.metal_abs;%percent of light absorbed by hitting the SMA metal
-SMAFL=SystemParam.SMA_flushlength;%=1*10^4;%the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
-SMA_L=SystemParam.SMA_totallength;%=2.5*10^4;%the total length of the SMA connector is 2.5 cm long
-SMA_d=SystemParam.SMA_diam;%diameter of SMA connector [mm to um]
-bounce_num=SystemParam.housing_bounce;%maximum number of times I'm willing to let the ray bounce between the SMA and the fiber
+% metalAbsorbPct=SystemParam.metalAbsorbPct;%percent of light absorbed by hitting the SMA metal
+SMAFL=SystemParam.smaFlushLength;%=1*10^4;%the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
+SMA_L=SystemParam.smaTotalLength;%=2.5*10^4;%the total length of the SMA connector is 2.5 cm long
+SMA_d=SystemParam.smaDiameter;%diameter of SMA connector [mm to um]
+bounce_num=SystemParam.housingBounce;%maximum number of times I'm willing to let the ray bounce between the SMA and the fiber
 iteration=Global_Index(1);h=Global_Index(2);aa=Global_Index(3);%indexes
 %for things inside of the SMA connector
 %parametric travel
-dySMA=sign(Vtransmit(2))*((SMA_d/2)-SystemParam.r_fiber);%distance in the direction of travel to what would be the sma edhge
+dySMA=sign(Vtransmit(2))*((SMA_d/2)-SystemParam.fiberRadius);%distance in the direction of travel to what would be the sma edhge
 tSMA=dySMA/Vtransmit(2);
 dxSMA=tSMA*Vtransmit(1);
 XSMA=P(1)+dxSMA;%x location at possible sma edge
@@ -67,7 +67,7 @@ if ratYtoX==0 %if the transmitting ray is  entirely horizontl, not worried about
 %             %find the attenuation coefficient of the medium
 %             [~,k]=medium_check(SystemParam,P(1));%quick function to figure what medium we're in + the relevant proerties
 %         %     include a check %if the ray travels through the same medium the whole time
-%         %     if SystemParam.waterInterface==0 || ((Pbounce(1)<xbounce)&&(xbounce < SystemParam.waterstart)) || ((Pbounce(1)>xbounce)&&(xbounce > SystemParam.waterstart))
+%         %     if SystemParam.waterInterface==0 || ((Pbounce(1)<xbounce)&&(xbounce < SystemParam.waterStart)) || ((Pbounce(1)>xbounce)&&(xbounce > SystemParam.waterStart))
 %         dx_end=SystemParam.xlen-P(1);
 %         
 %         I_rem_trans=I_transmit*exp(-k*(dx_end*10^-4));
@@ -90,11 +90,11 @@ if ratYtoX==0 %if the transmitting ray is  entirely horizontl, not worried about
         end
 %     else %if it is within the sma connector, remove some of the absorbing light, can't measure
 %     I_return=I_reflect;
-        % I_return=I_in*(1-metal_abs);
-% IT.housi=IT.housi+(I_in*metal_abs);
+        % I_return=I_in*(1-metalAbsorbPct);
+% IT.housi=IT.housi+(I_in*metalAbsorbPct);
        
-%I_return=I_reflect*(1-metal_abs);
-%         IT.housi=IT.housi+(I_reflect*metal_abs)+I_transmit;
+%I_return=I_reflect*(1-metalAbsorbPct);
+%         IT.housi=IT.housi+(I_reflect*metalAbsorbPct)+I_transmit;
     end
 %     P_return=P;
     %%disp(I_transmit)
@@ -112,14 +112,14 @@ elseif ratXtoY<=0 %if the transmitting ray is only vertical
             %record the values
             %assume we lose all of the light into the housing, nothing is
             %measured
-%             I_return=I_in*(1-metal_abs);
-% IT.housi=IT.housi+(I_in*metal_abs);
+%             I_return=I_in*(1-metalAbsorbPct);
+% IT.housi=IT.housi+(I_in*metalAbsorbPct);
 %             IT.housi=I_transmit+IT.housi;
-%             I_return=I_reflect*(1-metal_abs);
-            %I_return=I_reflect*(1-metal_abs);
+%             I_return=I_reflect*(1-metalAbsorbPct);
+            %I_return=I_reflect*(1-metalAbsorbPct);
 
 %             IT.housi=I_transmit+IT.housi;
-%             I_return=I_reflect*(1-metal_abs);
+%             I_return=I_reflect*(1-metalAbsorbPct);
         else
             %record the measureable values. assume all light is side
             %emitted
@@ -164,10 +164,10 @@ elseif P(1)>=0 && P(1)<=SMAFL %if the ray impacts within the flush part of the s
     %everything is reflected, nothing is measured
 %             [ni,k,Tco]=medium_check(SystemParam,P(1));%quick function to figure what medium we're in + the relevant proerties
 I_return=I_reflect;
-% I_return=I_in*(1-metal_abs);
-% IT.housi=IT.housi+(I_in*metal_abs);
-    %     I_return=I_reflect*(1-metal_abs);%mostly things reflect except for whats lost during
-%     IT.housi=(I_reflect*(metal_abs))+I_transmit+IT.housi;%amount absorbed by the metal
+% I_return=I_in*(1-metalAbsorbPct);
+% IT.housi=IT.housi+(I_in*metalAbsorbPct);
+    %     I_return=I_reflect*(1-metalAbsorbPct);%mostly things reflect except for whats lost during
+%     IT.housi=(I_reflect*(metalAbsorbPct))+I_transmit+IT.housi;%amount absorbed by the metal
     P_return=P;
 % %      [Tally,~,~]=DifTrack([I_transmit,I_reflect],[I_return,(Meas0-sum(meas.inten)),(House0-IT.housi)],SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
 % %      [Tally,~,~]=inOutTrack(I_in,(Meas0-sum(meas.inten)),SystemParam,'SMA total loss w/in meas_SMA_check',1,Global_Index,Tally);
@@ -218,7 +218,7 @@ else%if the light bounces in the sma (outside of the flush part), and the ray wo
     V_extra_return=zeros(bounce_num,2);
 
 
-    while bounce<=bounce_num && condition && conditionSMA &&I_bounce>I_min
+    while bounce<=bounce_num && condition && conditionSMA &&I_bounce>intensityMin
             %take measurement at the top using the I_bounce
              meas0=sum(meas.inten);%house0=IT.housi;
     meas.inten(meas.counter)=I_bounce;
@@ -282,24 +282,24 @@ xbounce=xbounce1+dxSMA;
         %determine the refractive indices && attenuation coefficients
         nt=SystemParam.n1;
         %     include a check %if the ray travels through the same medium the whole time
-        %     if SystemParam.waterInterface==0 || ((Pbounce(1)<xbounce)&&(xbounce < SystemParam.waterstart)) || ((Pbounce(1)>xbounce)&&(xbounce > SystemParam.waterstart))
+        %     if SystemParam.waterInterface==0 || ((Pbounce(1)<xbounce)&&(xbounce < SystemParam.waterStart)) || ((Pbounce(1)>xbounce)&&(xbounce > SystemParam.waterStart))
 %calc attenuation coeff over the travel dist to hit SMA
 
         kloss=exp(-k*(drSMA*10^-4));
         %     else %if the ray switches into a new medium. need to calc losses,
         %     snells law, fresnell, new dir
-        %         dx_int1=SystemParam.waterstart-Pbounce(1);
-        %         dx_int2=xbounce-SystemParam.waterstart;
+        %         dx_int1=SystemParam.waterStart-Pbounce(1);
+        %         dx_int2=xbounce-SystemParam.waterStart;
         %         if dx_int1<0%if we're traveling in the -x dir
         %             klosswater=
-        %         if (Pbounce(1)+dxSMA) <SystemParam.waterstart%if the transition is in between the sma back to fiber travel path
+        %         if (Pbounce(1)+dxSMA) <SystemParam.waterStart%if the transition is in between the sma back to fiber travel path
         %         else
         %             Vi=Vbounce;%same initial direction
-        %             dx_int=SystemParam.waterstart-(Pbounce(1)+dxSMA);
+        %             dx_int=SystemParam.waterStart-(Pbounce(1)+dxSMA);
         %             dx_air=abs(dxSMA)+abs(dx_int);
         %             t_air=(abs(dxSMA)+abs(dx_int))/abs(Vbounce(1));
         %             dy_air=abs(t_air*Vbounce(2));
-        %             dx_water=xbounce-SystemParam.waterstart;
+        %             dx_water=xbounce-SystemParam.waterStart;
         %             t_water=dx_water/abs(Vbounce(1));
         %             dy_water=abs(t_water*Vbounce(2));
         %         else
@@ -332,8 +332,8 @@ xbounce=xbounce1+dxSMA;
         V_extra_return(bounce,:)=V_transmit;
         Vbounce=V_reflect;
 
-        if I_bounce<SystemParam.I_min
-            Tally.photon_min_count(iteration,h,aa)=Tally.photon_min_count(iteration,h,aa)+1;%counting all the times the model exits a function bc the direction is vertical
+        if I_bounce<SystemParam.intensityMin
+            Tally.minPhotons_count(iteration,h,aa)=Tally.minPhotons_count(iteration,h,aa)+1;%counting all the times the model exits a function bc the direction is vertical
             break
         end
         %update for next while loop

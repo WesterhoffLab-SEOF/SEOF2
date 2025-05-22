@@ -1,444 +1,237 @@
-%%simplest possible fiber model%%
-%changes frp, prev are just an update to the binning model to be more
-%representative of the x data 
-
+%% Prepare The Environment
 close all; clear all;%fresh slate
 addpath('Utilities');%functions go into utilities folder
 addpath('Data Structs');%structs go into this folder
 
-%%%%%%%%%%%%SETTING UP THE SIMULATION%%%%%%%%%%%%%%
-%systemParam, direct input, can change these
+%% Setting Up The Workspace And User Preferences
+% Change this function to change simulation parameters
+% Set parameters here you don't want to iterate over, that happens below
 SystemParam = setupSystemParams();
-%data display variables... what do you want to see generated?
-writeToFile =1;   % set to 1 to save generated results to excel file, set to 0 otherwise
-%filename = 'C:\Users\ndshapi1.ASURITE\OneDrive - Arizona State University\SEOF_Raytracing 082823\data\medswings50cm041525_air.xlsx';%%C:\Users\Nora Shapiro\OneDrive - Arizona State University\SEOF_Raytracing 082823\data\model_50cm_111023.xlsx'; %name of file %MUST INCLUDE ADDRESS OF DESTINATION FOLDER    
-%Make sure the filename is in a writable location and does not require
-%admin access
-filename='C:\Users\etwes\OneDrive\Documents\test.xlsx';%
-sheet_num=1;%Excel Sheet number t
-description="21x21 rays, 100mW 170deg, 70 deg half angle, led emission, 1mm sep dist. 50.5* water 4.5cm with unfilled sma connector*. nfibi [2.5,3.75,5]iE-07,rcoef[0.7,0.725,.75,0.775,0.8],ang=pi/[15,18],nmetal[1.3,1.325,1.35],scat=[11,15]";%description of the changes made in this file
 
+% Set to 1 to save generated results to excel file, set to 0 otherwise
+writeToFile = 1;   
 
+% Set a valid writable filename, and display to output
+filename = fullfile(pwd, 'data', 'output.xlsx');
+disp(filename)
 
-%%%SETTING UP PARAMETERS NEEDED FOR ITERATION AND DATA DISPLAY%%%%
-%all of these variables can be turned into a vector of different values so
-%it will automatically re-run the model with a new variable.
-%CAN ONLY ITERATE ON ONE AT A TIME FOR NOW
-rfiber=SystemParam.r_fiber;%[125,200,250,500];%;%SystemParam.r_fiber;%[1500/2,1500];%[125,200,250,500];%[125,200,250,500];%[125,250,500]%um alternate
-x_len=SystemParam.xlen;%[12.5,50.5].*10^4;%([10,15,20,25,30,35,40,45,50]+2)*10^4;%cm->[um] alternate
-xlen=SystemParam.xlen;
-led_dist=SystemParam.led_distance;%[0,1,2,3,4,5,10,20,30,40,50,100,200,300,400,500,1000,2000,3000,4000,5000];% mm alternate[0,1,2,3,4,5];% mm alternate
-nfib=1.5+1i;%SystemParam.n1;%1.5+([1E-07,1.2E-07,1.5E-07,2.5E-07,5E-07].*1i);%description of the changes made in this file
-%1.5+([0.5E-07,1E-07,1.2E-07,1.3E-07,1.4E-07,1.5E-07,1.6E-07,1.7E-07,1.8E-07,2E-07,2.5E-07,5E-07].*1i);%SystemParam.n1;%1.5+(1i.*logspace(-7.301,-4.6021,15));%1.5+(1.5E-07*1i);%%1.5+[1.5E-07,2.5E-07,5E-07].*1i;%1.5+[1.5E-07].*1i;%(linspace(1E-08,1E-07,4).*1i);%1.5+(1i.*1.06*10^-7);%linspace(6*10^-8,3*10^-7,10);%SystemParam.n1;
-% nmetal_real=1.3+linspace(-0.3,0.1,5);
-% nmetal_comp=(2.3+linspace(-0.2,0.2,5))*1i;
-% [nmetal_r,nmetal_i]=meshgrid(nmetal_real,nmetal_comp);
-n_metal=1.325+2.3i;%SystemParam.n_metal;%[1.3,1.35,1.37,1.41,1.42,1.45,1.5]+2.3i;%;[1.38,1.39,1.4]+2.3i;%[(1.39+2.3i),(1.365+0.01i),(0.22+3.2i)];%%[1.3,1.45,1.475,1.5]+2.3i;%%(1.4,1.45,1.46,1.47):0.02:1.48)+(1i*2.3);%;%[(1.46+2.3i),(1.365+0.01i),0.22+3.2i]%(1.445:0.005:1.465)+2.3i;%%[1.3,1.45,1.475,1.5]+2.3i;%%(1.32:0.02:1.48)+(1i*2.3);%nmetal_r+nmetal_i;
-ray_sqrt=SystemParam.angnum;%[21,23,25,27,29,31,41,51,101];%
-scatter_num=7;%SystemParam.scatnum;%[11,15,19];%SystemParam.scatnum;%[3,7,9,11,13,21,27];%SystemParam.scatnum;%[3,7,9,11,13,21,27];%%13:2:27;%
-dx_num=SystemParam.cont_dx;%[100000,10000,1000,100,10,1];%
-I_min_var=SystemParam.I_min;%SystemParam.photon_min*10.^([15,12,9,6,3,1]);%
-sma_num =SystemParam.housing_bounce;%[1,2,3,4,5];%
-%ang_vec=linspace(pi/7.2,pi/6.8,9);
-max_scatter_ang=pi/15;%SystemParam.scat_ang_max;%[pi/3,pi/7,pi/18];%SystemParam.scat_ang_max;%[pi/2.1,pi/6.75,pi/5,pi/8,pi/18];%[pi/6.75,pi/6.9,pi/7,pi/7.1,pi/7.25];%%linspace(pi/7.2,pi/5.8,7);%[pi/7.2,pi/6.8,pi/6.4];%linspace(pi/6,pi/2,5);%[pi/18,pi/15,pi/12,pi/9,pi/6,pi/4,pi/3,pi*2/5,pi*3/7,pi/2];% [pi/18,pi/6,pi/4,pi/3,pi/2];%
-bounce_var=SystemParam.maxbounce;%[1,2,3,4,5];%
-raysc_coeff=0.7;%SystemParam.r_coeff;%[0.9,0.6,0.3];%[0.01,0.5,0.9];%[0.1:0.025:0.2,0.3];%SystemParam.r_coeff;%[0.1,0.125,0.15,0.175,0.2];%[0.1,0.25,0.5];%%coefficient for what percentage of the loss is attributed to scattering vs absorption
-sma_fill_length=SystemParam.SMA_fill;%(1.25:0.25:2.25).*10^4;%SystemParam.SMA_fill;%(1.25:.25:2.5).*10^4;%SystemParam.SMA_fill;
-water_status=SystemParam.waterInterface;%[1,0];%[1,0];%
-%include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%vector of the size of each possible iterateable vector
-%lengths of each iterable variable
-lengths_it=[length(rfiber),length(x_len),length(led_dist),length(nfib),length(n_metal),length(ray_sqrt),length(scatter_num),...
-    length(dx_num),length(I_min_var),length(sma_num),length(max_scatter_ang),length(bounce_var),length(raysc_coeff),length(sma_fill_length),length(water_status)];%include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-names_it=['rfiber','xlen','led_dist','nfib','n_metal','ray_sqrt','scatter_num',...
-    'dx_num','I_min_var','sma_num','max_scatter_ang','bounce_var','raysc_coeff','sma_fill_length','water_status'];
-it_num=max(lengths_it);
-index_it=find(lengths_it>1);%indexes of iterable variable(s)
-legend_Main=" ";
-leg_Main=" ";
-%if/else statement for use in displaying data about the iteration/fiber
-%bundle
-if ~isempty(index_it)%if there are iterable variables%% TO DO generalize
-    if length(index_it)>1%if there are multiple variables with multiple iterations make the set up
-        % % yes_itname=2;
-        % % it_num=sum((lengths_it(index_it)));
-        % % Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-        % % x_len=ones(it_num,1).*SystemParam.xlen;%;reshape(Len,1,[]);
-        % % scat_num=ones(it_num,1).*SystemParam.scatnum;%;reshape(Len,1,[]);
-        % % sma_fill_length=ones(it_num,1).*SystemParam.SMA_fill;%;reshape(Len,1,[]);
-        % % ang=ones(it_num,1).*SystemParam.scat_ang_max;%;reshape(Len,1,[]);
-        % % rco=ones(it_num,1).*SystemParam.r_coeff;%;reshape(Len,1,[]);
-        % % fibN=ones(it_num,1).*SystemParam.n1;%;reshape(Len,1,[]);
-        % % metalN=ones(it_num,1).*SystemParam.n_metal;%;reshape(Len,1,[]);
-        % % water_status=ones(it_num,1).*SystemParam.waterInterface;
-        % % startind=1;
-        % % if length(nfib)>1
-        % %     endind=startind+length(nfib)-1;
-        % %     fibN(startind:endind)=nfib;
-        % %     nfib=fibN;
-        % %     startind=endind+1;
-        % % end
-        % % if length(scatter_num)>1
-        % %     endind=startind+length(scatter_num)-1;
-        % %     scat_num(startind:endind)=scatter_num;
-        % %     scatter_num=scat_num;
-        % %     startind=endind+1;
-        % % end
-        % % if length(raysc_coeff)>1
-        % %     endind=startind+length(raysc_coeff)-1;
-        % %     rco(startind:endind)=raysc_coeff;
-        % %     raysc_coeff=rco;
-        % %     startind=endind+1;
-        % % end
-        % % if length(max_scatter_ang)>1
-        % %     endind=startind+length(max_scatter_ang)-1;
-        % %     ang(startind:endind)=max_scatter_ang;
-        % %     max_scatter_ang=ang;
-        % %     startind=endind+1;
-        % % end
-        % % if length(n_metal)>1
-        % %     endind=startind+length(n_metal)-1;
-        % %     metalN(startind:endind)=n_metal;
-        % %     n_metal=metalN;
-        % %     startind=endind+1;
-        % % end
-        % % 
-        % % ang_denom=(max_scatter_ang./pi).^-1;
-        % % leg_Main=cell(1,it_num);
-        % % for i=1:it_num
-        % %     leg_Main(1,i)={sprintf('water status; %.3g, scatter num; %.3g, maximum scatter angle denom; %.4g, rcoeff; %.3g, Imaginary RI; %.1e, Metal RI; %.3g, SMA fill amt; %.3g, fib length; %.3g',water_status(i),scatter_num(i),ang_denom(i),raysc_coeff(i),(imag(nfib(i))),real(n_metal(i)),sma_fill_length(i),x_len(i))};
-        % % end
-        % % legend_Main=string(leg_Main);
-                yes_itname=2;
-        it_num=prod(lengths_it(index_it));
-        Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-        %[wat_stat,scat_num,ang,metalN,rco,fibN,sma_fill,Len]=ndgrid(water_status,scatter_num,max_scatter_ang,n_metal,raysc_coeff,nfib,sma_fill_length,x_len);
-        [wat_stat,ang,rco,fibN,metalN,scat_num,Len,sma_fill]=ndgrid(water_status,max_scatter_ang,raysc_coeff,nfib,n_metal,scatter_num,x_len,sma_fill_length);
+% Set excel sheet number to write to
+sheetNum=1;
 
-        %[ang,rco,fibN,metalN,scat_num]=ngrid(max_scatter_ang,raysc_coeff,nfib,n_metal,scatter_num);
-        water_status=reshape(wat_stat,1,[]);
-        x_len=reshape(Len,1,[]);
-        scatter_num=reshape(scat_num,1,[]);
-        max_scatter_ang=reshape(ang,1,[]);
-        sma_fill_length=reshape(sma_fill,1,[]);
-        ang_denom=(max_scatter_ang./pi).^-1;
-        raysc_coeff=reshape(rco,1,[]);
-        nfib=reshape(fibN,1,[]);
-        n_metal=reshape(metalN,1,[]);
-        leg_Main=cell(1,it_num);
-        for i=1:it_num
-            leg_Main(1,i)={sprintf('water status; %.3g, scatter num; %.3g, maximum scatter angle denom; %.4g, rcoeff; %.3g, Imaginary RI; %.1e, Metal RI; %.3g, SMA fill amt; %.3g, fib length; %.3g',water_status(i),scatter_num(i),ang_denom(i),raysc_coeff(i),(imag(nfib(i))),real(n_metal(i)),sma_fill_length(i),x_len(i))};
-        end
-        legend_Main=string(leg_Main);
-%         error('More than one variable is being iterated, please fix and re-try')
-    elseif SystemParam.num_fib>1 %if there is more than one fiber in the bundle and we're iterating (this should be a capability we have eventually though)
-        yes_itname=0;
-        error('You are trying to iterate different variables for a bundle of fibers, please fix and re-try')
-    else%only one variable with multiple iteration. Determine which variable is being iterated
-        yes_itname=1;%name of the iteration needs to be incorporated into data display
-        switch index_it
-            case 1
-                it_name='Radius of Fiber (/mum)';
-                Title_Main=sprintf('Irradiance along the Fiber Length, Varying Fiber Diameter \n %d Fiber(s), %d cm long, %d mm coupling distance',SystemParam.num_fib, xlen/10^4,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('%d (/mum) Diameter',rfiber(i)*2)};
-                    end
-                legend_Main=string(leg_Main);
-            case 2
-                it_name='Length of Fiber (/mum)';
-                Title_main=sprintf('Irradiance along the Fiber Length, Varying Fiber Length \n %d Fiber(s),  %d [um] OD , %d mm coupling distance',SystemParam.num_fib,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('%d (cm] Length',x_len(i)/10^4)};
-                    end
-                legend_Main=string(leg_Main);
-            case 3
-                it_name='LED Distance from Fiber (mm)';
-                Title_Main=sprintf('Irradiance along the Fiber Length, Varying Coupling Distance \n %d Fiber(s), %d cm long, %d [um] OD',SystemParam.num_fib, xlen/10^4,rfiber*2);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('%d (mm) Coupling Distance',led_dist(i))};
-                    end
-                legend_Main=string(leg_Main);
-                %include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            case 4
-                it_name='imaginary part of complex refractive index';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('Imaginary RI: %d',imag(nfib(i)))};
-                    end
-                legend_Main=string(leg_Main);
-                %include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-             case 5
-                it_name=' metal refractive index';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('Imaginary metal RI: %d',n_metal(i))};
-                    end
-                legend_Main=string(leg_Main);
-                %include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-             case 6
-                it_name='Ray fidelity number';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('Ray fidelity number: %d',ray_sqrt(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 7
-                it_name='Scatter fidelity number';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('Scatter fidelity number: %d',scatter_num(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 8
-                it_name='dx fidelity';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('dx fidelity: %d [um]',dx_num(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 9
-                it_name='Minimum Intensity Tracked';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('Minimum Intensity Tracked: %d [uW/cm2]',I_min_var(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 10
-                it_name='number of housing bounces';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('housing bounce number: %d',sma_num(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 11
-                it_name='maximum scatter angle';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('maximum scatter angle: %d [rad]',max_scatter_ang(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 12
-                it_name='number of fiber bounces';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('fiber bounce number: %d',bounce_var(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 13
-                it_name='portion of light going to rayleigh scattering';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('rayleigh light %: %d',raysc_coeff(i))};
-                    end
-                legend_Main=string(leg_Main);
-            case 14
-                it_name='length to which the sma connector is filled with cytop';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('sma fill length%: %d [cm]',sma_fill_length(i))};
-                    end
-                legend_Main=string(leg_Main);
-           case 15
-                it_name='whether water is present or not';
-                Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
-                leg_Main=cell(1,lengths_it(index_it));
-                    for i=1:lengths_it(index_it)
-                        leg_Main(1,i)={sprintf('water medium (true or false)%: %d [cm]',water_status(i))};
-                    end
-                legend_Main=string(leg_Main);
-            otherwise 
-                error('unexpected iteratable variable. Please add a new switch-case for it')
-         end
+%% Define Iteration Parameters and Metadata
+
+% Use standard SystemParams
+iterParamsStandard = struct( ...
+    'fiberRadius', SystemParam.fiberRadius, ...
+    'xLen', SystemParam.xLen, ...
+    'ledDistance', SystemParam.ledDistance, ...
+    'nFiber', SystemParam.n1, ...
+    'nMetal', SystemParam.nMetal, ...
+    'ray_sqrt', SystemParam.angleNum, ...
+    'scatterNumber', SystemParam.scatterNum, ...
+    'dxNum', SystemParam.contDx, ...
+    'intensityMin', SystemParam.intensityMin, ...
+    'smaNum', SystemParam.housingBounce, ...
+    'maxScatterAngle', SystemParam.maxScatterAngle, ...
+    'maxBounce', SystemParam.maxBounce, ...
+    'rayScatterCoeff', SystemParam.rayScatterCoeff, ...
+    'smaFillLength', SystemParam.smaFillLength, ...
+    'waterStatus', SystemParam.waterInterface);
+
+% Define your own, iterable, version
+iterParamsCustom = struct( ...
+    'fiberRadius', [125,200], ...
+    'xLen', ([10,20,30]+2)*10^4, ... %cm->[um]
+    'ledDistance', SystemParam.ledDistance, ...
+    'nFiber', SystemParam.n1, ...
+    'nMetal', SystemParam.nMetal, ...
+    'ray_sqrt', SystemParam.angleNum, ...
+    'scatterNumber', SystemParam.scatterNum, ...
+    'dxNum', SystemParam.contDx, ...
+    'intensityMin', SystemParam.intensityMin, ...
+    'smaNum', SystemParam.housingBounce, ...
+    'maxScatterAngle', SystemParam.maxScatterAngle, ...
+    'maxBounce', SystemParam.maxBounce, ...
+    'rayScatterCoeff', SystemParam.rayScatterCoeff, ...
+    'smaFillLength', SystemParam.smaFillLength, ...
+    'waterStatus', SystemParam.waterInterface);
+
+iterParams = iterParamsCustom;
+
+paramNames = fieldnames(iterParams);
+paramLengths = cellfun(@(f) length(iterParams.(f)), paramNames);
+iterVars = find(paramLengths > 1);
+
+% Check number of varying parameters
+if isempty(iterVars)
+    it_name = ' ';
+    yes_itname = 0;
+    legendMain = ' ';
+    Title_Main = generateTitle(SystemParam);
+elseif length(iterVars) > 1
+    % Multiple parameters vary — full grid
+    [gridStruct, it_num] = generateParameterGrid(iterParams);
+    legendMain = generateLegends(gridStruct, paramNames(iterVars));
+    yes_itname = 2;
+    Title_Main = generateTitle(SystemParam);
+
+    % Flatten grid to update iterParams values
+    for i = 1:length(iterVars)
+        name = paramNames{iterVars(i)};
+        iterParams.(name) = gridStruct.(name);
     end
-
-else%if there are no iterable variables (just running 1 case)
-    if SystemParam.num_fib>1%if there are no iterable variables but there are a bundle of fibers to look at
-        it_name='Fiber in Bundle';
-        yes_itname=1;%iteration name needed for data display
-        leg_Main=cell(1,SystemParam.num_fib);%initialize cell for string vector for the legend
-        for i=1:SystemParam.num_fib
-            leg_Main(i)={sprintf('Fiber %d',i)};
-        end
-        legend_Main=string(leg_Main);
-    else %only one fiber, don't need a legend
-        yes_itname=0;%no iteration name needed for data display
-        it_name=' ';
-        legend_Main=' ';
-    end
-    legend_Main=' ';
-    Title_Main=sprintf('Irradiance along the Fiber Length \n %d Fiber(s), %d cm long, %d [um] OD , %d mm coupling distance',SystemParam.num_fib, xlen/10^4,rfiber*2,led_dist);
+else
+    % Only one parameter is being iterated
+    varName = paramNames{iterVars};
+    values = iterParams.(varName);
+    it_name = getDisplayName(varName);
+    yes_itname = 1;
+    Title_Main = generateTitle(SystemParam);
+    legendMain = arrayfun(@(v) formatLegend(varName, v), values, 'UniformOutput', false);
+    legendMain = string(legendMain);
 end
 
-%set up number of random smoothing loops
- aa_lim=1;%include if/then statements for increasing the limit to higher if there are random input parameters
- %Maybe there should be a system param for how smoothed the data should be?
+description = autoGenerateDescription(iterParams);
 
-%num_max = floor((SystemParam.xlen/10e3)/(SysteParam.division/10e3));%dividing length of fiber by the increments, then adding one to have data at each end of bin
-%accessing data storage structs
-ray=Ray; %for each individual ray
-aa_Rand=aaRand; %for each trial run to smooth out random values
-FibIt=Fib_It;%for each fiber
-SumVal=SummaryVals;%ALL of the ray data for each fiber. cell.
-Tally=Tracking;%tracking how much certain things happen. Assists with troubleshooting
-meas=Measure_Instant;%instant, temporary storage of measurable data
-IT=travel_storage;%temporary storage of light losses within the travel function
-%empty vectors for storing all of the summary data of each fiber at each
-%iteration. (1) is the average val, (2) is the std of the avg val
-FibIt(1).Pow_enter=zeros(it_num,SystemParam.num_fib);FibIt(2).Pow_enter=zeros(it_num,SystemParam.num_fib);
-FibIt(1).transmitted=zeros(it_num,SystemParam.num_fib);FibIt(2).transmitted=zeros(it_num,SystemParam.num_fib);
-FibIt(1).pow_side=zeros(it_num,SystemParam.num_fib);FibIt(2).pow_side=zeros(it_num,SystemParam.num_fib);
-FibIt(1).pow_side_use=zeros(it_num,SystemParam.num_fib);FibIt(2).pow_side_use=zeros(it_num,SystemParam.num_fib);
-FibIt(1).SMA_pow_side=zeros(it_num,SystemParam.num_fib);FibIt(2).SMA_pow_side=zeros(it_num,SystemParam.num_fib);
-FibIt(1).pow_side_waterst=zeros(it_num,SystemParam.num_fib);FibIt(2).pow_side_waterst=zeros(it_num,SystemParam.num_fib);
-FibIt(1).absorbed=zeros(it_num,SystemParam.num_fib);FibIt(2).absorbed=zeros(it_num,SystemParam.num_fib);
-FibIt(1).backscat=zeros(it_num,SystemParam.num_fib);FibIt(2).backscat=zeros(it_num,SystemParam.num_fib);
-FibIt(1).SMAabs=zeros(it_num,SystemParam.num_fib);FibIt(2).SMAabs=zeros(it_num,SystemParam.num_fib);
-FibIt(1).approxpow_dif=zeros(it_num,SystemParam.num_fib);FibIt(2).approxpow_dif=zeros(it_num,SystemParam.num_fib);
-FibIt(1).approxpow_pos=zeros(it_num,SystemParam.num_fib);FibIt(2).approxpow_pos=zeros(it_num,SystemParam.num_fib);
-FibIt(1).b2hpow=zeros(it_num,SystemParam.num_fib);FibIt(2).b2hpow=zeros(it_num,SystemParam.num_fib);
-FibIt(1).cutoffpow=zeros(it_num,SystemParam.num_fib);FibIt(2).cutoffpow=zeros(it_num,SystemParam.num_fib);
-FibIt(1).remaininglosses=zeros(it_num,SystemParam.num_fib);FibIt(2).remaininglosses=zeros(it_num,SystemParam.num_fib);
-FibIt(1).UC=zeros(it_num,SystemParam.num_fib);FibIt(2).UC=zeros(it_num,SystemParam.num_fib);
-FibIt(1).RatioIsIt=zeros(it_num,SystemParam.num_fib);FibIt(2).RatioIsIt=zeros(it_num,SystemParam.num_fib);
-FibIt(1).Y=cell(it_num,SystemParam.num_fib);FibIt(2).Y=cell(it_num,SystemParam.num_fib);
+%% Setting Up The Simulation
+% Set up smoothing parameters
+aa_lim = 1;  % Future: Set dynamically if using random inputs
+% Consider adding a SystemParam field like: SystemParam.smoothingLevel
 
+% Access core simulation data
+ray    = Ray;             % Individual rays
+aa_Rand = aaRand;         % Random trials
+FibIt   = Fib_It;         % Fiber iteration data
+SumVal  = SummaryVals;    % All ray data (cell)
+Tally   = Tracking;       % Diagnostic tracking
+meas    = Measure_Instant;% Instantaneous measurements
+IT      = travel_storage; % Temporary loss storage
 
-%%%%%%EACH ITERATION OF THE FIBER
-for iteration=1:it_num
-    r_fiber=SystemParam.r_fiber;
-    %%%%%%%reset parameters to be reflective of the iteration number
-    if yes_itname==1%if there are iterable items
-        if index_it==1
-            SystemParam.r_fiber=rfiber(iteration);
-            r_fiber=SystemParam.r_fiber;
-        elseif index_it==2
-            SystemParam.xlen=xlen(iteration);
-        elseif index_it==3
-            SystemParam.led_distance=led_dist(iteration);
-            %include cytop and/or NP variables here%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        elseif index_it==4
-            SystemParam.n1=nfib(iteration);
-        elseif index_it==5
-            SystemParam.n_metal=n_metal(iteration);
-        elseif index_it==6
-            SystemParam.angnum=ray_sqrt(iteration);               %number of angles of led emission (must be less than raynum, below)
-            SystemParam.raynum=SystemParam.angnum^2;  %total number of rays of led emission
-            SystemParam.scatnum=ray_sqrt(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==7
-            SystemParam.scatnum=scatter_num(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==8
-            SystemParam.cont_dx=dx_num(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==9
-            SystemParam.I_min=I_min_var(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==10
-            SystemParam.housing_bounce=sma_num(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==11
-            SystemParam.scat_ang_max=max_scatter_ang(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==12
-            SystemParam.maxbounce=bounce_var(iteration);             %maximum number of rays produced by the scattering during end reflect
-        elseif index_it==13
-            r_coeff=raysc_coeff(iteration);
-        elseif index_it==14
-           SystemParam.SMA_fill= sma_fill_length(iteration);
-        elseif index_it==15
-            SystemParam.waterInterface=water_status(iteration);
+% Initialize output arrays
+fields = ["Pow_enter", "transmitted", "pow_side", "pow_side_use", ...
+          "SMA_pow_side", "pow_side_waterst", "absorbed", "backscat", ...
+          "SMAabs", "approxpow_dif", "approxpow_pos", "b2hpow", ...
+          "cutoffpow", "remaininglosses", "UC", "RatioIsIt"];
+for f = fields
+    FibIt(1).(f) = zeros(it_num, SystemParam.numFibers);
+    FibIt(2).(f) = zeros(it_num, SystemParam.numFibers);
+end
+FibIt(1).Y = cell(it_num, SystemParam.numFibers);
+FibIt(2).Y = cell(it_num, SystemParam.numFibers);
+
+%% Main iteration loop
+for iteration = 1:it_num
+    % Reset fiberRadius each loop in case it's overwritten
+    fiberRadius = SystemParam.fiberRadius;
+
+    % Apply parameter overrides for each iteration case
+    if yes_itname == 1
+        val = iteration;
+        switch index_it
+            case 1,  SystemParam.fiberRadius     = fiberRadius(val);
+                     fiberRadius                 = SystemParam.fiberRadius;
+            case 2,  SystemParam.xLen            = xLen(val);
+            case 3,  SystemParam.ledDistance     = ledDistance(val);
+            case 4,  SystemParam.n1              = nFiber(val);
+            case 5,  SystemParam.nMetal          = nMetal(val);
+            case 6,  SystemParam.angleNum        = ray_sqrt(val);
+                     SystemParam.numLedRays      = ray_sqrt(val)^2;
+                     SystemParam.scatterNum      = ray_sqrt(val);
+            case 7,  SystemParam.scatterNum      = scatterNumber(val);
+            case 8,  SystemParam.contDx          = dxNum(val);
+            case 9,  SystemParam.intensityMin    = intensityMin(val);
+            case 10, SystemParam.housingBounce   = smaNum(val);
+            case 11, SystemParam.maxScatterAngle = maxScatterAngle(val);
+            case 12, SystemParam.maxBounce       = maxBounce(val);
+            case 13, SystemParam.rayScatterCoeff = rayScatterCoeff(val);
+            case 14, SystemParam.smaFillLength   = smaFillLength(val);
+            case 15, SystemParam.waterInterface  = waterStatus(val);
+            otherwise, error('Unhandled parameter index_it = %d', index_it);
         end
-    elseif yes_itname==2 %to do generalize
-        SystemParam.scat_ang_max=max_scatter_ang(iteration); 
-        SystemParam.r_coeff=raysc_coeff(iteration);
-        SystemParam.n1=nfib(iteration);
-        SystemParam.n_metal=n_metal(iteration);
-        SystemParam.waterInterface=water_status(iteration);
-        SystemParam.scatnum=scatter_num(iteration);             %maximum number of rays produced by the scattering during end reflect
-        SystemParam.SMA_fill=sma_fill_length(iteration);
-        SystemParam.xlen=x_len(iteration);
-        xlen=SystemParam.xlen;
-        if x_len(iteration)>=48.5*10^4
-            SystemParam.sealed_SMA=1;
+    elseif yes_itname == 2
+        % Multiple parameters vary
+        SystemParam.maxScatterAngle = gridStruct(iteration).maxScatterAngle; 
+        SystemParam.rayScatterCoeff = gridStruct(iteration).rayScatterCoeff;
+        SystemParam.n1              = gridStruct(iteration).nFiber;
+        SystemParam.nMetal          = gridStruct(iteration).nMetal;
+        SystemParam.waterInterface  = gridStruct(iteration).waterStatus;
+        SystemParam.scatterNum      = gridStruct(iteration).scatterNumber;
+        SystemParam.smaFillLength   = gridStruct(iteration).smaFillLength;
+        SystemParam.xLen            = gridStruct(iteration).xLen;
+        
+        % Special rule for sealed SMA connectors
+        if SystemParam.xLen >= 48.5e4
+            SystemParam.isSmaSealed = 1;
         else
-            SystemParam.sealed_SMA=0;
+            SystemParam.isSmaSealed = 0;
         end
     end
 
-%calculate parameters that may need to use the changed iteration system
-%param
-    SystemParam.alpha=(10^-6)*(imag(SystemParam.n1)*4*pi/(SystemParam.uv_wavelength*10^-9))*10/log(10);%db/um overall absorption coefficient
-% SystemParam.alpha_uv=alpha*(1-r_coeff);%db/um %ub absorption coeff
-% SystemParam.alpha_r=alpha*r_coeff;%db/um %rayleigh scattering absorption coefficient
 
-Xvec=0:(SystemParam.division/10e3):(SystemParam.xlen/10e3);
-%%%%%%%setting up information for req number of random loops%%%%
+    %calculate parameters that may need to use the changed iteration system
+    SystemParam.alpha=(10^-6)*(imag(SystemParam.n1)*4*pi/(SystemParam.uvWavelength*10^-9))*10/log(10);%db/um overall absorption coefficient
+    % SystemParam.uvAlpha=alpha*(1-rayScatterCoeff);%db/um %ub absorption coeff
+    % SystemParam.rayleighAlpha=alpha*rayScatterCoeff;%db/um %rayleigh scattering absorption coefficient
+    Xvec=0:(SystemParam.division/10e3):(SystemParam.xLen/10e3);
+
+    %%%%%%%setting up information for req number of random loops%%%%
     %include if/then surface roughness/NP randomness and such statements
     %statements%%%%%%%%%%%%
     
     %%%%% create the boundary struct for a glass fiber%%%%%%%
     Bounds = Bound;
-    Bounds.Pf0=[0,SystemParam.r_fiber];%boundary at starting position
-    Bounds.Pfe=[SystemParam.xlen,SystemParam.r_fiber];%boundary at ending position
+    Bounds.Pf0=[0,SystemParam.fiberRadius];%boundary at starting position
+    Bounds.Pfe=[SystemParam.xLen,SystemParam.fiberRadius];%boundary at ending position
     
     %%Uniformity coefficient index set up for later calculation
-    i1=round((((xlen/10000)-1)/(SystemParam.division*10^-4))*(0.1))+1;
-    i6=round((((xlen/10000)-2)/(SystemParam.division*10^-4))*(0.6))+1;
+    i1=round((((SystemParam.xLen/10000)-1)/(SystemParam.division*10^-4))*(0.1))+1;
+    i6=round((((SystemParam.xLen/10000)-2)/(SystemParam.division*10^-4))*(0.6))+1;
     
     
     %set up of incoming ray angle, intensity, for a variable number of fibers
-    LED_d=SystemParam.led_distance;%(um)%LED distance in um for Entering Light
+    LED_d=SystemParam.ledDistance;%(um)%LED distance in um for Entering Light
     [Ray_X,Ray_Y,alpha_ang,beta_ang,Power_mat] = OutputLED3D(SystemParam);
-    powercheck=sum(Power_mat,'all')*(SystemParam.LEDd*10^-1)^2;% make sure power isn't greater than the total LED power
+    powercheck=sum(Power_mat,'all')*(SystemParam.ledDiameter*10^-1)^2;% make sure power isn't greater than the total LED power
     %determining light rays entering each fiber
-    [circles,combocircles] = fiberBundle3D(SystemParam.num_fib,r_fiber*2);
-    %[Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D_AINsubstrate(SystemParam,r_fiber, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Intensity_mat,circles);
-    [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D(SystemParam,r_fiber, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Power_mat,circles);
+    [circles,combocircles] = fiberBundle3D(SystemParam.numFibers,fiberRadius*2);
+    %[Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D_AINsubstrate(SystemParam,fiberRadius, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Intensity_mat,circles);
+    [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Entering_X,Entering_Y,incoming_int,incoming_ang] = enterLight3D(SystemParam,fiberRadius, LED_d,alpha_ang,beta_ang,Ray_X,Ray_Y,Power_mat,circles);
     %compressed to 2D
-%    Ent_Int=Ent_Int;
+    %Ent_Int=Ent_Int;
     [a,b,c]=size(Ent_Int); %[num ang changes,num y locations, number fibers]
 
    
-              %empty storage for a numeric count of some stuff for trouble
-              %shooting
-        Tally.photon_vert_count=zeros(it_num,SystemParam.num_fib,aa_lim);
-        Tally.photon_min_count=zeros(it_num,SystemParam.num_fib,aa_lim);
-        Tally.transmission_count=zeros(it_num,SystemParam.num_fib,aa_lim);%all the time the transmission count is reached
-        Tally.big_dif_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
-        Tally.big_dif_amt_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
-        Tally.big_dif_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
-        Tally.big_dif_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
-        Tally.big_dif_count_meas_main=cell(it_num,SystemParam.num_fib,aa_lim);
-        Tally.IO_count_main=zeros(it_num,SystemParam.num_fib,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
-        Tally.IO_amt_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
-        Tally.IO_pos_main=zeros(it_num,SystemParam.num_fib,aa_lim);%recording the significant difference amount
-        Tally.IO_fun_main=cell(it_num,SystemParam.num_fib,aa_lim);%record the name of the function causing issues
-        Tally.IO_count_meas_main=cell(it_num,SystemParam.num_fib,aa_lim);
-
-        %within a function
-        Tally.big_dif_count_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%counting all of the times theres a significant difference with a magnitude >10^-6
-        Tally.big_dif_amt_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%recording the significant difference amount
-        Tally.big_dif_pos_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%recording the significant difference amount
-        Tally.big_dif_fun_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);%record the name of the function causing issues
-        Tally.big_dif_count_meas_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);
-        Tally.IO_count_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%counting all of the times theres a significant difference with a magnitude >10^-6
-        Tally.IO_amt_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%recording the significant difference amount
-        Tally.IO_pos_func=zeros(it_num,SystemParam.num_fib,aa_lim,a,b);%recording the significant difference amount
-        Tally.IO_fun_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);%record the name of the function causing issues
-        Tally.IO_count_meas_func=cell(it_num,SystemParam.num_fib,aa_lim,a,b);
-        Tally.case1count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.case2count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.case3count=zeros(it_num,SystemParam.num_fib,aa_lim);
-Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
+    %empty storage for a numeric count of some stuff for trouble
+    %shooting
+    Tally.photon_vert_count=zeros(it_num,SystemParam.numFibers,aa_lim);
+    Tally.minPhotons_count=zeros(it_num,SystemParam.numFibers,aa_lim);
+    Tally.transmission_count=zeros(it_num,SystemParam.numFibers,aa_lim);%all the time the transmission count is reached
+    Tally.big_dif_count_main=zeros(it_num,SystemParam.numFibers,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
+    Tally.big_dif_amt_main=zeros(it_num,SystemParam.numFibers,aa_lim);%recording the significant difference amount
+    Tally.big_dif_pos_main=zeros(it_num,SystemParam.numFibers,aa_lim);%recording the significant difference amount
+    Tally.big_dif_fun_main=cell(it_num,SystemParam.numFibers,aa_lim);%record the name of the function causing issues
+    Tally.big_dif_count_meas_main=cell(it_num,SystemParam.numFibers,aa_lim);
+    Tally.IO_count_main=zeros(it_num,SystemParam.numFibers,aa_lim);%counting all of the times theres a significant difference with a magnitude >10^-6
+    Tally.IO_amt_main=zeros(it_num,SystemParam.numFibers,aa_lim);%recording the significant difference amount
+    Tally.IO_pos_main=zeros(it_num,SystemParam.numFibers,aa_lim);%recording the significant difference amount
+    Tally.IO_fun_main=cell(it_num,SystemParam.numFibers,aa_lim);%record the name of the function causing issues
+    Tally.IO_count_meas_main=cell(it_num,SystemParam.numFibers,aa_lim);
+    
+    %within a function
+    Tally.big_dif_count_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%counting all of the times theres a significant difference with a magnitude >10^-6
+    Tally.big_dif_amt_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%recording the significant difference amount
+    Tally.big_dif_pos_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%recording the significant difference amount
+    Tally.big_dif_fun_func=cell(it_num,SystemParam.numFibers,aa_lim,a,b);%record the name of the function causing issues
+    Tally.big_dif_count_meas_func=cell(it_num,SystemParam.numFibers,aa_lim,a,b);
+    Tally.IO_count_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%counting all of the times theres a significant difference with a magnitude >10^-6
+    Tally.IO_amt_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%recording the significant difference amount
+    Tally.IO_pos_func=zeros(it_num,SystemParam.numFibers,aa_lim,a,b);%recording the significant difference amount
+    Tally.IO_fun_func=cell(it_num,SystemParam.numFibers,aa_lim,a,b);%record the name of the function causing issues
+    Tally.IO_count_meas_func=cell(it_num,SystemParam.numFibers,aa_lim,a,b);
+    Tally.case1count=zeros(it_num,SystemParam.numFibers,aa_lim);
+    Tally.case2count=zeros(it_num,SystemParam.numFibers,aa_lim);
+    Tally.case3count=zeros(it_num,SystemParam.numFibers,aa_lim);
+    Tally.whiletravcount=zeros(it_num,SystemParam.numFibers,aa_lim);
 
     %within each individual fiber
     for h=1:c%%%%%%include for number fiber change
@@ -461,8 +254,8 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         aa_Rand(1).UC=zeros(1,aa_lim);aa_Rand(2).UC=zeros(1,aa_lim);
         aa_Rand(1).RatioIsIt=zeros(1,aa_lim);aa_Rand(2).RatioIsIt=zeros(1,aa_lim);
         aa_Rand(1).Y=cell(aa_lim,1);aa_Rand(2).Y=cell(aa_lim,1);
-%         aa_Rand(1).meas_inten=cell(1,aa_lim); %length of all the rays used
-%         aa_Rand(1).meas_points=cell(1,aa_lim);%length of all the rays used
+        % aa_Rand(1).meas_inten=cell(1,aa_lim); %length of all the rays used
+        % aa_Rand(1).meas_points=cell(1,aa_lim);%length of all the rays used
         aa_Rand(1).meas_inten=cell((a*b),aa_lim); %length of all the rays used
         aa_Rand(1).meas_points=cell((a*b),aa_lim);%length of all the rays used
         %empty storage vector setup for each individual ray 
@@ -482,7 +275,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         ray.approxpow_pos=zeros(aa_lim,a,b); %absolute value of all of the power difference approximations
         ray.b2hpow=zeros(aa_lim,a,b);
         ray.cutoffpow=zeros(aa_lim,a,b);
-         ray.remaininglosses=zeros(aa_lim,a,b);%should theoretically be equal to the approxpow_dif?;
+        ray.remaininglosses=zeros(aa_lim,a,b);%should theoretically be equal to the approxpow_dif?;
         ray.UC=zeros(aa_lim,a,b);
         ray.RatioIsIt=zeros(aa_lim,a,b);
         ray.Y=cell(aa_lim,a,b);
@@ -494,9 +287,11 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
             %include NP distribution
             for xx=1:a
                 for yy=1:b
-                   if Ent_Int(xx,yy,h)==0%dont need to bother iterating through no intensity
+                   %dont need to bother iterating through no intensity
+                   if Ent_Int(xx,yy,h)==0
                        continue
                    end
+
                     %measurement storage vectors
                     meas.points= zeros(2*10e6,2);
                     meas.inten = zeros(2*10e6,1);
@@ -506,7 +301,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                     Global_Index=[iteration,h,aa,xx,yy];%record the index values, may need to include a gg if scatter cone at the front
                     Y_sum=zeros(size(Xvec));
                     %create a scatter cone
-                    if SystemParam.scat_front==1
+                    if SystemParam.frontScatter==1
                         [I_scatter,Theta_enter]=scatter_cone(SystemParam,Theta(xx,yy,h),1);
                         I_enter=I_scatter.*Ent_Int(xx,yy,h);
                         gg_max=length(I_scatter);
@@ -522,7 +317,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                             I_ent=I_enter(gg);
                             Theta_ent=Theta_enter(gg);
                             %preallocate empty vectors with limits for the  while loop
-                            max_loop=1+(SystemParam.maxbounce*SystemParam.scatnum);%max number of loops to run
+                            max_loop=1+(SystemParam.maxBounce*SystemParam.scatterNum);%max number of loops to run
                             
                             I_in=zeros(1,(max_loop));
                             I_intrack=zeros(1,(max_loop));
@@ -561,7 +356,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                                 back0=ray.backscat(aa,xx,yy);
                                 smaabs0=ray.SMAabs(aa,xx,yy);
                                 approx0=ray.approxpow(aa,xx,yy);
-                                if I_0<SystemParam.I_min%check to make sure the while loop is worth it to keep running
+                                if I_0<SystemParam.intensityMin%check to make sure the while loop is worth it to keep running
                                     ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_0;%mark amount of light left after cutoff
                                     I_in(1,while_num)=0;%redundant with the continue but just in case
                                     while_num=while_num+1;%update the while number
@@ -601,7 +396,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                                 
                                 %check if there's enough power to warrant going thru the end reflect
                                 %function
-                                if I_1<SystemParam.I_min
+                                if I_1<SystemParam.intensityMin
                                     %store and record data. much more probably
                                     ray.cutoffpow(aa,xx,yy)=ray.cutoffpow(aa,xx,yy)+I_1;%
                                     %lots of stuff in here
@@ -628,7 +423,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                                 meas_start2=sum(meas.inten);%initial total measured before entering into the end reflect function
                                 %%%%%%%end reflect stuff%%%%%%%%%
                                 %               disp('sum forward scatter')
-                                if bounce_num<=SystemParam.maxbounce
+                                if bounce_num<=SystemParam.maxBounce
                                     %create the new rays for the loop, update the
                                     %bounce number, take relevant measurements and
                                     %tallies.
@@ -636,7 +431,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                                     %record and save
                                     ray.transmitted(aa,xx,yy)=ray.transmitted(aa,xx,yy)+I_trans;
                                     ray.b2hpow(aa,xx,yy)=b2h+ray.b2hpow(aa,xx,yy);%record and save
-                                    I_scat(I_scat<SystemParam.I_min)=0;%any of the scattered rays less than the minimum tracking power are set to 0
+                                    I_scat(I_scat<SystemParam.intensityMin)=0;%any of the scattered rays less than the minimum tracking power are set to 0
                                     %create approprate indices for assigning the scattered values to the main while loop vectors
                                     end_index=st_index+length(I_scat)-1;
                                     indices_assign=st_index:1:end_index;
@@ -701,7 +496,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                                 end
                                 
                                 %if the loop cuts off with anything remaining in it
-                                if while_num==(2+(SystemParam.maxbounce*SystemParam.scatnum)) && any(I_in)%these conditions shouldn't occur BUT
+                                if while_num==(2+(SystemParam.maxBounce*SystemParam.scatterNum)) && any(I_in)%these conditions shouldn't occur BUT
                                     ray.cutoffpow(aa,xx,yy)=sum(I_in)+ray.cutoffpow(aa,xx,yy);
                                 end
                                 
@@ -741,25 +536,21 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                 aa_Rand(1).meas_inten(xxyy_ind,aa)={meas.inten(indexes)};%assign measured intensity to a row vector
                 aa_Rand(1).meas_points(xxyy_ind,aa)=ray.meas_points(aa,xx,yy);%assign measured points to a row vector
 
- 
                 end
-                
             end
-            
-            
             
             meas_point_aa=cell2mat(aa_Rand(1).meas_points(:,aa));
             meas_inten_aa=cell2mat(aa_Rand(1).meas_inten(:,aa));
                 if any(meas_inten_aa)
                     disp('any')
-                       [XVEC,Y, lengthPlot,pow_side_total] = Bins032725(meas_point_aa, meas_inten_aa, SystemParam.division, xlen, r_fiber,SystemParam);
+                       [XVEC,Y, lengthPlot,pow_side_total] = Bins032725(meas_point_aa, meas_inten_aa, SystemParam.division, xLen, fiberRadius,SystemParam);
                     use_index=find(meas_point_aa(:,1)>=(2.5*10^4));%indexes of all of the measurement points that correspond to measurable light after the sma
-                    water_st_index=find(meas_point_aa(:,1)>=SystemParam.waterstart);
-                    SMA_index=find(meas_point_aa(:,1)<=SystemParam.SMA_totallength);
+                    water_st_index=find(meas_point_aa(:,1)>=SystemParam.waterStart);
+                    SMA_index=find(meas_point_aa(:,1)<=SystemParam.smaTotalLength);
                     pow_side_use=sum(meas_inten_aa(use_index));%*(2*pi*(SystemParam.r_fib*10^-4)*((SystemParam.;
                     SMA_pow_side=sum(meas_inten_aa(SMA_index));%*;
                     pow_side_waterst=sum(meas_inten_aa(water_st_index));
-                    dAwater=((SystemParam.xlen*10^-4)-(SystemParam.waterstart*10^-4))*2*pi*(SystemParam.r_fiber*10^-4);
+                    dAwater=((SystemParam.xLen*10^-4)-(SystemParam.waterStart*10^-4))*2*pi*(SystemParam.fiberRadius*10^-4);
                     record_pow=pow_side_waterst*dAwater
                     %performance metric parameters
                     aa_Rand(1).Y(aa,1)=Y;
@@ -768,19 +559,19 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                 else
                     incr=SystemParam.division*10^-4;
                     if SystemParam.SMA==1
-                    num_max = floor(((xlen/10e3)-(SystemParam.SMA_totallength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+                    num_max = floor(((SystemParam.xLen/10e3)-(SystemParam.smaTotalLength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
                 
                     XVEC = zeros(1,num_max+2);    
                 %first two measurement points will be within the SMA flush length
-                Inc1=SystemParam.SMA_flushlength*10^-4;
-                Inc2=(SystemParam.SMA_totallength-SystemParam.SMA_flushlength)*10^-4;
+                Inc1=SystemParam.smaFlushLength*10^-4;
+                Inc2=(SystemParam.smaTotalLength-SystemParam.smaFlushLength)*10^-4;
                 
                 %first two points have irregular indexes if a part of the sma connector
                 XVEC(1)=-(Inc2+Inc1);
                 XVEC(2)=-Inc1;
                 XVEC(3:end)=0:incr:(incr*(num_max-1));
                     else
-                      num_max = floor((xlen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+                      num_max = floor((SystemParam.xLen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
 
                         XVEC=0:incr:(incr*(num_max-1));
                     end
@@ -789,7 +580,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
                     SMA_pow_side=0;
                     pow_side_waterst=0;
                     %performance metric parameters
-                    Ylocal=zeros(1,(floor((SystemParam.xlen/10e3)/(SystemParam.division/10e3))+1));%local version of the I(x) vector
+                    Ylocal=zeros(1,(floor((SystemParam.xLen/10e3)/(SystemParam.division/10e3))+1));%local version of the I(x) vector
                     aa_Rand(1).UC(1,aa)=0;
                     aa_Rand(1).Y(aa,1)={Ylocal};
                 end
@@ -798,7 +589,7 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
         
         aa_Rand(1).Pow_enter(1,aa)=sum(ray.Pow_enter(aa,:,:),'all');
         aa_Rand(1).transmitted(1,aa)=sum(ray.transmitted(aa,:,:),'all');
-        trans_pow=aa_Rand(1).transmitted(1,aa).*pi*(SystemParam.r_fiber*10^-4)^2
+        trans_pow=aa_Rand(1).transmitted(1,aa).*pi*(SystemParam.fiberRadius*10^-4)^2
 
         aa_Rand(1).RatioIsIt(aa,xx,yy)=aa_Rand(1).pow_side(1,aa)/aa_Rand(1).transmitted(1,aa);
         aa_Rand(1).pow_side(1,aa)=pow_side_total;
@@ -895,10 +686,10 @@ Tally.whiletravcount=zeros(it_num,SystemParam.num_fib,aa_lim);
          
          %plotting the pie chart tracking stuff
          %percent of each thing for power balance
-figure(1)
-Power_Track=[aa_Rand(1).pow_side(1,aa),aa_Rand(1).transmitted(1,aa),aa_Rand(1).SMAabs(1,aa),aa_Rand(1).b2hpow(1,aa),aa_Rand(1).backscat(1,aa),aa_Rand(1).absorbed(1,aa),aa_Rand(1).cutoffpow(1,1),aa_Rand(1).remaininglosses(1,1)];
-Power_Track_lab=["pow_side" "transmitted" "SMAabs" "b2hpow" "backscat" "absorbed" "cutoffpow" "remaininglosses"];
-pie(Power_Track,Power_Track_lab)
+%figure(1)
+%Power_Track=[aa_Rand(1).pow_side(1,aa),aa_Rand(1).transmitted(1,aa),aa_Rand(1).SMAabs(1,aa),aa_Rand(1).b2hpow(1,aa),aa_Rand(1).backscat(1,aa),aa_Rand(1).absorbed(1,aa),aa_Rand(1).cutoffpow(1,1),aa_Rand(1).remaininglosses(1,1)];
+%Power_Track_lab=["pow_side" "transmitted" "SMAabs" "b2hpow" "backscat" "absorbed" "cutoffpow" "remaininglosses"];
+%pie(Power_Track,Power_Track_lab)
 % 
 % figure(2)
 % Power_Track_comp=[aa_Rand(1).pow_side_use(1,aa),aa_Rand(1).SMA_pow_side(1,aa),aa_Rand(1).transmitted(1,1),aa_Rand(1).SMAabs(1,1),aa_Rand(1).b2hpow(1,1),aa_Rand(1).backscat(1,1),aa_Rand(1).absorbed(1,1),aa_Rand(1).cutoffpow(1,1),aa_Rand(1).remaininglosses(1,1)];
@@ -1104,7 +895,7 @@ pie(Power_Track,Power_Track_lab)
     %%%%SAVING EACH ITERATION, each fiber DATA
     %saving
         if (writeToFile == 1)
-            writeResults(SystemParam, description, filename, sheet_num, iteration, h, FibIt, c, legend_Main, aa_lim, LED_d, XVEC)
+            writeResults(SystemParam, description, filename, sheetNum, iteration, h, FibIt, c, legendMain, aa_lim, LED_d, XVEC)
         end
     end%%%%%%%%%%
 %  load gong.mat%gong to signal the code is done handel.mat %chorus sound to signal the code is done %
@@ -1112,7 +903,7 @@ pie(Power_Track,Power_Track_lab)
 
 end
 % if yes_itname==1%if we need a legend bc there's multiple iterations
-%     legend(legend_Main)
+%     legend(legendMain)
 % end
 hold off
 % load gong.mat%gong to signal the code is done handel.mat %chorus sound to signal the code is done %

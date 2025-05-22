@@ -2,7 +2,7 @@ classdef Tracking
     properties
         %within the main model
         photon_vert_count;%counting all the times the model exits a function bc the direction is vertical
-        photon_min_count;%counting all the times the model exits a function bc the direction is vertical
+        minPhotons_count;%counting all the times the model exits a function bc the direction is vertical
         transmission_count;%counting all the time the transmission case is reached
         big_dif_count_main;%counting all of the times theres a significant difference with a magnitude >10^-6
         big_dif_amt_main;%recording the significant difference amount

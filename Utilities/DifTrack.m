@@ -11,7 +11,7 @@ function [Tally,Differenceamount,Diffamountpos] =  DifTrack(In_Pow,Out_Pow,Syste
     Diffamountpos = abs(Differenceamount);
     %include a big_dif_amt_counted with counted cells
     if main_or_func==0%in the main function
-        if Diffamountpos > st_pow*SystemParam.dif_tol && Diffamountpos >=SystemParam.I_min%if the difference is up to 10% of the min tracking number uW        
+        if Diffamountpos > st_pow*SystemParam.difTolerance && Diffamountpos >=SystemParam.intensityMin%if the difference is up to 10% of the min tracking number uW        
             Tally.big_dif_count_main(iteration,h,aa)=Tally.big_dif_count_main(iteration,h,aa)+1;
             Tally.big_dif_amt_main(iteration,h,aa)=Tally.big_dif_amt_main(iteration,h,aa)+Differenceamount;
             Tally.big_dif_pos_main(iteration,h,aa)=Tally.big_dif_pos_main(iteration,h,aa)+Diffamountpos;
@@ -19,7 +19,7 @@ function [Tally,Differenceamount,Diffamountpos] =  DifTrack(In_Pow,Out_Pow,Syste
             Tally.big_dif_count_meas_main{h,iteration,aa,Tally.big_dif_count_main(iteration,h,aa)}={Differenceamount};
         end
     elseif main_or_func==1%within a function
-        if Diffamountpos > st_pow*SystemParam.dif_tol && Diffamountpos >=SystemParam.I_min%if the difference is up to 10% of the min tracking number uW        
+        if Diffamountpos > st_pow*SystemParam.difTolerance && Diffamountpos >=SystemParam.intensityMin%if the difference is up to 10% of the min tracking number uW        
             Tally.big_dif_count_func(iteration,h,aa,xx,yy)=Tally.big_dif_count_func(iteration,h,aa,xx,yy)+1;
             Tally.big_dif_amt_func(iteration,h,aa,xx,yy)=Tally.big_dif_amt_func(iteration,h,aa,xx,yy)+Differenceamount;
             Tally.big_dif_pos_func(iteration,h,aa,xx,yy)=Tally.big_dif_pos_func(iteration,h,aa,xx,yy)+Diffamountpos;

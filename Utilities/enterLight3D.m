@@ -2,13 +2,13 @@ function [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Enterin
 %variables from system parameters
 nt = SystemParam.n1;              % RI of Quartz Optical Fiber %refracted index
 ni = SystemParam.n2;              % RI of "gap"/air %air index
-%I_init = SystemParam.I_init;          % LED intensity, 50 mW
+%initialIntensity = SystemParam.initialIntensity;          % LED intensity, 50 mW
         nhat=[-1 0];%surface of fiber is the flat cut end
         horz_surf=0;%not a horizontal surface
         direction=1;
         %Ray_X and Ray_Y use (um), as does circles
 %r_fiber=SystemParam.rfiber; 
-k_air = SystemParam.kair*10^-4; %estimated light attenuation constant (1/cm)->(1/um) https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
+k_air = SystemParam.kAir*10^-4; %estimated light attenuation constant (1/cm)->(1/um) https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
 LED_dist=led_d;%*10^-3;%;mm
 [a,b,c,d]=size(Intensity_mat);
 [e,f,g]=size(circles);
@@ -16,7 +16,7 @@ r_fiber=r_fib;%*10^-3;%um>mm
 imageSizeX=e;
 imageSizeY=f;
 center_image=[round(imageSizeX/2),round(imageSizeY/2)];
-I_init=sum(Intensity_mat,'all');
+initialIntensity=sum(Intensity_mat,'all');
 %empty vector set ups
 Ent_Int=zeros(a,c,g);
 Theta=zeros(a,c,g);
@@ -104,9 +104,9 @@ for q=1:g
         end
     end
     total_act_Ent_Int=sum(Ent_Int(:,:,q),'all');
-    I_init_check=I_init;
-     perc_hit(q)=total_entering_int/I_init;%perc_hit(q)=sum(sum(incoming_int(:,:,q)))/I_init;
-     perc_ent(q)=total_act_Ent_Int/I_init;%sum(Ent_Int(:,:,q),'all')/I_init;  %%    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/I_init;    
+    initialIntensity_check=initialIntensity;
+     perc_hit(q)=total_entering_int/initialIntensity;%perc_hit(q)=sum(sum(incoming_int(:,:,q)))/initialIntensity;
+     perc_ent(q)=total_act_Ent_Int/initialIntensity;%sum(Ent_Int(:,:,q),'all')/initialIntensity;  %%    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/initialIntensity;    
 end
 
 

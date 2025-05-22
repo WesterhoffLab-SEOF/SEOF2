@@ -1,11 +1,11 @@
 function [Scat_distrib] = Scatter_Coeff(SystemParam)
 %UNTITLED12 Summary of this function goes here
 %   Detailed explanation goes here
-ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nwater,SystemParam.n_metal];
+ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nWater,SystemParam.nMetal];
 nt_vec=ni_vec;
 st=0;
 last=pi/2;
-theta_vec=linspace(st,last,180.*SystemParam.ang_div);%every half angle is considered
+theta_vec=linspace(st,last,180.*SystemParam.angleDiv);%every half angle is considered
 %think about including a system param to determine how the number of angles
 %considered is increased
 %to do, rename, cell of poss
@@ -89,7 +89,7 @@ for a=1:length(ni_vec)
             scat_total=Sideup+Sidedown+Forward+Backward;
             Rayloss=Sideup+Sidedown+Backward;%total "loss" considered by the rayleigh coeff
 
-            if abs(scat_total-1)>SystemParam.dif_tol
+            if abs(scat_total-1)>SystemParam.difTolerance
 
                 error('coefficients dont add to 100%')
 

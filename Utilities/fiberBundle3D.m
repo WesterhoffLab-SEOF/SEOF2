@@ -1,14 +1,14 @@
-function [circles,combocircles] = fiberBundle3D(num_fib,fiber_D)
+function [circles,combocircles] = fiberBundle3D(numFibers,fiber_D)
 %%%%%%%%takes the number of fibers, the fiber diameter of each (assumed the
 %%%%%%%%same), then reports the center of each fiber [circles] and a black
 %%%%%%%%+white image showing the packing geometry. Uses the minimum circle
 %%%%%%%%packing diameter (NS note: don't remember how I did this. it works
 %%%%%%%%consistently so am not trying to re-learn to edit.)
-if num_fib==1
+if numFibers==1
            %number of fibers
             d_fib=fiber_D;%(um)
             r_fib=d_fib/2;%(um)
-            A_fib=num_fib*pi*r_fib^2;%(um^2)
+            A_fib=numFibers*pi*r_fib^2;%(um^2)
             
             %SMA
             %optimized smallest diameter circle for n unit circles to fit into..
@@ -25,11 +25,11 @@ if num_fib==1
             circles=(row_image-(center_image(2))).^2+(column_image-(center_image(1))).^2 <=r_fib.^2;
             combocircles=circles;
 
-        elseif num_fib==4
-            num_fib=4;%number of fibers
+        elseif numFibers==4
+            numFibers=4;%number of fibers
             d_fib=fiber_D;%(um)
             r_fib=d_fib/2;%(um)
-            A_fib=num_fib*pi*r_fib^2;%(um^2)
+            A_fib=numFibers*pi*r_fib^2;%(um^2)
             
             %SMA
             %optimized smallest diameter circle for n unit circles to fit into..
@@ -67,11 +67,11 @@ if num_fib==1
             combo34=or(circles(:,:,3),circles(:,:,4));
             combocircles=or(combo12,combo34);
 
-        elseif num_fib==19
-            num_fib=19;%number of fibers
+        elseif numFibers==19
+            numFibers=19;%number of fibers
             d_fib=fiber_D;%(um)
             r_fib=d_fib/2;%(um)
-            A_fib=num_fib*pi*r_fib^2;%(um^2)
+            A_fib=numFibers*pi*r_fib^2;%(um^2)
             
             %SMA
             %optimized smallest diameter circle for n unit circles to fit into..

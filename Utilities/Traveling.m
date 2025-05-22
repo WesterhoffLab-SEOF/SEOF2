@@ -27,9 +27,9 @@ iteration=Global_Index(1);h=Global_Index(2);aa=Global_Index(3);xx=Global_Index(4
 n1 = SystemParam.n1;%fiber RI
 % n2 = SystemParam.n2;%separation gap/air RI
 % n5 = SystemParam.n5;%surrounding media  (water or air)RI
-xlen = SystemParam.xlen;
-I_min=SystemParam.I_min;
-dtrav=SystemParam.cont_dx;%continuous transmission interval [uW]
+xlen = SystemParam.xLen;
+intensityMin=SystemParam.intensityMin;
+dtrav=SystemParam.contDx;%continuous transmission interval [uW]
 %dxordr=SystemParam.dxordr;%select 0 if the logic is using dX, select 1 if the logic is using the whole travel distance
 
 %define general surface
@@ -51,7 +51,7 @@ switch direction
     otherwise
         error('unexpected direction')
 end
-while condition && I>=I_min
+while condition && I>=intensityMin
     %record initial values for checking performance/accuracy
     MEAS0_win=sum(meas.inten);ABS0=IT.absorbi;BACK0=IT.backi;CUTOFF0=IT.cutoffi;HOUSE0=IT.housi;APPROX0=IT.approxi;TRANS0=IT.transi;B2H0=IT.backi;
 
@@ -76,7 +76,7 @@ while condition && I>=I_min
         %CALCULATE LOSSES
         %if it's within the part of the SMA connector that will absorb all
         %of it. (But hey. maybe it'll scatter some stuff? unclear)
-        if P(1)<=SystemParam.SMA_flushlength && P(1)>=0
+        if P(1)<=SystemParam.smaFlushLength && P(1)>=0
             %record the values
             %assume we lose all of the light into the housing, nothing is
             %measured
@@ -298,7 +298,7 @@ while condition && I>=I_min
 
             %now can calculate reflected and transmitted light using the
             %fresnell eq
-            if I_in <0%=SystemParam.I_min 
+            if I_in <0%=SystemParam.intensityMin 
                 tvec_check=t_sort
                 t_check=t
                 t_id_check=t_id
@@ -309,7 +309,7 @@ while condition && I>=I_min
                 dx_check=dx
                 dy_check=dy
                 dr_check=dr
-                I_min_check=SystemParam.I_min
+                intensityMin_check=SystemParam.intensityMin
                 I_starting=I
                 V_starting=V
                 P_starting=P
@@ -328,7 +328,7 @@ while condition && I>=I_min
                 V_trans=V_transmit
                 P_side=P_sidemit
                 V_side=V_sideemit
-                error('I_in for fresnell case 3 <I_min')
+                error('I_in for fresnell case 3 <intensityMin')
             end
             [I_reflect_calc,I_transmit_calc]=FresnelEq(I_in,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
             %[I_reflect,I_transmit]=FresnelEq(I_in,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
@@ -341,8 +341,8 @@ while condition && I>=I_min
                 I_reflect=I_reflect_calc;
                 I_ref_loss=0;
             else
-                I_reflect=I_reflect_calc*(1-SystemParam.metal_abs);
-                I_ref_loss=I_reflect_calc*SystemParam.metal_abs;
+                I_reflect=I_reflect_calc*(1-SystemParam.metalAbsorbPct);
+                I_ref_loss=I_reflect_calc*SystemParam.metalAbsorbPct;
             end
 %              if isnan(I_transmit)
 %                disp(I)
@@ -452,8 +452,8 @@ if isnan(I)
                 error('isNaN')
 end
  
-    if I<SystemParam.I_min             
-        Tally.photon_min_count(iteration,h,aa)=Tally.photon_min_count(iteration,h,aa)+1;%counting all the times the model exits a function bc the direction is vertical
+    if I<SystemParam.intensityMin             
+        Tally.minPhotons_count(iteration,h,aa)=Tally.minPhotons_count(iteration,h,aa)+1;%counting all the times the model exits a function bc the direction is vertical
         break
     end
    %check conditions
