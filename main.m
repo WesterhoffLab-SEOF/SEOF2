@@ -1,5 +1,5 @@
 %% Prepare The Environment
-close all; clear all;%fresh slate
+close all; clear;%fresh slate
 addpath('Utilities');%functions go into utilities folder
 addpath('Data Structs');%structs go into this folder
 
@@ -9,188 +9,179 @@ addpath('Data Structs');%structs go into this folder
 SystemParam = setupSystemParams();
 
 % Set to 1 to save generated results to excel file, set to 0 otherwise
-writeToFile = 1;   
+writeToFile = 1;
 
 % If set to 1, each iteration will ding
 sound = 0;
 
 % Set a valid writable filename, and display to output
-filename = fullfile(pwd, 'data', 'output.xlsx');
+filename = fullfile(pwd, 'simoutput', 'ex_FILENAME.xlsx');
 disp(filename)
 
 % Set excel sheet number to write to
 sheetNum=1;
 
 %% Define Iteration Parameters and Metadata
-
 % Use standard SystemParams
 iterParamsStandard = struct( ...
     'fiberRadius', SystemParam.fiberRadius, ...
-    'xLen', SystemParam.xLen, ...
     'ledDistance', SystemParam.ledDistance, ...
-    'nFiber', SystemParam.n1, ...
+    'numFibers', SystemParam.numFibers,...%number of fibers, 1, 4 , or 19
+    'n1', SystemParam.n1, ...
     'nMetal', SystemParam.nMetal, ...
-    'ray_sqrt', SystemParam.angleNum, ...
-    'scatterNumber', SystemParam.scatterNum, ...
-    'dxNum', SystemParam.contDx, ...
-    'intensityMin', SystemParam.intensityMin, ...
-    'smaNum', SystemParam.housingBounce, ...
-    'maxScatterAngle', SystemParam.maxScatterAngle, ...
-    'maxBounce', SystemParam.maxBounce, ...
     'rayScatterCoeff', SystemParam.rayScatterCoeff, ...
+    'maxScatterAngle', SystemParam.maxScatterAngle, ...
+    'scatterNum', SystemParam.scatterNum, ...
+    'angleNum', SystemParam.angleNum, ...
+    'contDx', SystemParam.contDx, ...
+    'intensityMin', SystemParam.intensityMin, ...
+    'housingBounce', SystemParam.housingBounce, ...
+    'maxBounce', SystemParam.maxBounce, ...
     'smaFillLength', SystemParam.smaFillLength, ...
-    'waterStatus', SystemParam.waterInterface);
+    'xLen', SystemParam.xLen, ... %cm->[um]
+    'waterInterface', SystemParam.waterInterface);
 
-% Define your own, iterable, version
+% Iterate through multiple values of one or more variables
 iterParamsCustom = struct( ...
-    'fiberRadius', [125,200], ...
-    'xLen', ([10,20,30]+2)*10^4, ... %cm->[um]
+    'fiberRadius', SystemParam.fiberRadius, ...
     'ledDistance', SystemParam.ledDistance, ...
-    'nFiber', SystemParam.n1, ...
-    'nMetal', SystemParam.nMetal, ...
-    'ray_sqrt', SystemParam.angleNum, ...
-    'scatterNumber', SystemParam.scatterNum, ...
-    'dxNum', SystemParam.contDx, ...
+    'numFibers', SystemParam.numFibers,...%number of fibers,  4 , or 19
+    'n1', (1.5+1i.*[2.5e-07,5.5e-07]),...%SystemParam.n1, ...
+    'nMetal',([1.30,1.35]+(2.25*1i)),...% SystemParam.nMetal, ...%
+    'rayScatterCoeff', [0.7,0.9], ... %SystemParam.rayScatterCoeff, ...
+    'maxScatterAngle', [0.3, 0.44],...%SystemParam.maxScatterAngle, ...
+    'scatterNum', SystemParam.scatterNum, ...
+    'angleNum', SystemParam.angleNum, ...
+    'contDx', SystemParam.contDx, ...
     'intensityMin', SystemParam.intensityMin, ...
-    'smaNum', SystemParam.housingBounce, ...
-    'maxScatterAngle', SystemParam.maxScatterAngle, ...
+    'housingBounce', SystemParam.housingBounce, ...
     'maxBounce', SystemParam.maxBounce, ...
-    'rayScatterCoeff', SystemParam.rayScatterCoeff, ...
     'smaFillLength', SystemParam.smaFillLength, ...
-    'waterStatus', SystemParam.waterInterface);
+    'xLen', [12.5,50.5].*10^4,...%SystemParam.xLen, ... %cm->[um]
+    'waterInterface', [0,1]);%SystemParam.waterInterface);
+%decide if the iteration is one at a time or all combinations
+comboit=1;
+%decide if you want to import an excel file with pre-set combination
+readitlog=0;%% set this to 1 if you want to import a file for the iteration
+readitfile='ex_input.xlsx';%set the filename, including the type ex: filename.xlsx (file should exist in the siminput folder)..
+%if we're doing both xlen and  waterinterface for my simulations
 
-iterParams = iterParamsCustom;
+[iterParams,iterVar,paramNames,paramLengths,it_num,legendMain,Title_Main,yes_itname,itname,itdif,xlen2true]= setupIterParams(iterParamsCustom,iterParamsStandard,SystemParam,comboit,readitlog,readitfile);
 
-paramNames = fieldnames(iterParams);
-paramLengths = cellfun(@(f) length(iterParams.(f)), paramNames);
-iterVars = find(paramLengths > 1);
 
-% Check number of varying parameters
-if isempty(iterVars)
-    it_name = ' ';
-    yes_itname = 0;
-    legendMain = ' ';
-    Title_Main = generateTitle(SystemParam);
-elseif length(iterVars) > 1
-    % Multiple parameters vary — full grid
-    [gridStruct, it_num] = generateParameterGrid(iterParams);
-    legendMain = generateLegends(gridStruct, paramNames(iterVars));
-    yes_itname = 2;
-    Title_Main = generateTitle(SystemParam);
-
-    % Flatten grid to update iterParams values
-    for i = 1:length(iterVars)
-        name = paramNames{iterVars(i)};
-        iterParams.(name) = gridStruct.(name);
-    end
-else
-    % Only one parameter is being iterated
-    varName = paramNames{iterVars};
-    values = iterParams.(varName);
-    it_name = getDisplayName(varName);
-    yes_itname = 1;
-    Title_Main = generateTitle(SystemParam);
-    legendMain = arrayfun(@(v) formatLegend(varName, v), values, 'UniformOutput', false);
-    legendMain = string(legendMain);
-end
 
 description = autoGenerateDescription(iterParams);
 
 %% Setting Up The Simulation
 % Set up smoothing parameters
 numRandomIters = 1;  % Future: Set dynamically if using random inputs
+if numRandomIters>1
+    randvar=1;
+else
+    randvar=0;
+end
 % Consider adding a SystemParam field like: SystemParam.smoothingLevel
 
 % Access core simulation data
-ray    = Ray;             % Individual rays
-trial = randomTrial;         % Random trials
+ray     = Ray;             % Individual rays
+trial   = randomTrial;         % Random trials
 FibIt   = Fib_It;         % Fiber iteration data
 SumVal  = SummaryVals;    % All ray data (cell)
 Tally   = Tracking;       % Diagnostic tracking
 meas    = Measure_Instant;% Instantaneous measurements
 IT      = travel_storage; % Temporary loss storage
+header  = writeheadfile;  %for writing to the top of the file
 
 % Initialize output arrays
 fields = ["Pow_enter", "transmitted", "pow_side", "pow_side_use", ...
-          "SMA_pow_side", "pow_side_waterst", "absorbed", "backscat", ...
-          "SMAabs", "approxpow_dif", "approxpow_pos", "b2hpow", ...
-          "cutoffpow", "remaininglosses", "UC", "RatioIsIt"];
+    "SMA_pow_side", "pow_side_waterst", "absorbed", "backscat", ...
+    "SMAabs", "approxpow_dif", "approxpow_pos", "b2hpow", ...
+    "cutoffpow", "remaininglosses", "UC", "RatioIsIt"];
 for f = fields
     FibIt(1).(f) = zeros(it_num, SystemParam.numFibers);
     FibIt(2).(f) = zeros(it_num, SystemParam.numFibers);
 end
+if SystemParam.SMA
+    XVEC10=[0.5,1:1:9,9.5];
+    XVEC50=[0.5,1:1:47,47.5];
+    endxval=((max(iterParams.xLen)-SystemParam.smaTotalLength).*10^-4)-0.5;
+    if endxval==floor(endxval)
+        xvecall=[0.5,1:1:endxval];
+    else
+        xvecall=[0.5,1:1:floor(endxval),endxval];
+    end
+else
+    XVEC10=[0.5,1:1:12];
+    XVEC50=[0.5,1:1:50];
+    endxval=(max(iterParams.xLen).*10^-4)-0.5;
+    if endxval==floor(endxval)
+        xvecall=[0.5,1:1:endxval];
+    else
+        xvecall=[0.5,1:1:floor(endxval),endxval];
+    end
+end
+[topoffile,header] = prepWrite(filename,header,SystemParam,iterParams,FibIt,XVEC10,XVEC50,endxval,description);
+
+
 FibIt(1).Y = cell(it_num, SystemParam.numFibers);
 FibIt(2).Y = cell(it_num, SystemParam.numFibers);
 
+
 %% Main iteration loop
-for iteration = 1:it_num
+for iteration =1:1:it_num
     % Reset fiberRadius each loop in case it's overwritten
     fiberRadius = SystemParam.fiberRadius;
 
     % Apply parameter overrides for each iteration case
     if yes_itname == 1
         val = iteration;
-        switch index_it
-            case 1,  SystemParam.fiberRadius     = fiberRadius(val);
-                     fiberRadius                 = SystemParam.fiberRadius;
-            case 2,  SystemParam.xLen            = xLen(val);
-            case 3,  SystemParam.ledDistance     = ledDistance(val);
-            case 4,  SystemParam.n1              = nFiber(val);
-            case 5,  SystemParam.nMetal          = nMetal(val);
-            case 6,  SystemParam.angleNum        = ray_sqrt(val);
-                     SystemParam.numLedRays      = ray_sqrt(val)^2;
-                     SystemParam.scatterNum      = ray_sqrt(val);
-            case 7,  SystemParam.scatterNum      = scatterNumber(val);
-            case 8,  SystemParam.contDx          = dxNum(val);
-            case 9,  SystemParam.intensityMin    = intensityMin(val);
-            case 10, SystemParam.housingBounce   = smaNum(val);
-            case 11, SystemParam.maxScatterAngle = maxScatterAngle(val);
-            case 12, SystemParam.maxBounce       = maxBounce(val);
-            case 13, SystemParam.rayScatterCoeff = rayScatterCoeff(val);
-            case 14, SystemParam.smaFillLength   = smaFillLength(val);
-            case 15, SystemParam.waterInterface  = waterStatus(val);
-            otherwise, error('Unhandled parameter index_it = %d', index_it);
-        end
+        SystemParam.(paramNames{iterVar(1)})=iterParams.(paramNames{iterVar(1)})(val);
     elseif yes_itname == 2
         % Multiple parameters vary
-        SystemParam.maxScatterAngle = gridStruct(iteration).maxScatterAngle; 
-        SystemParam.rayScatterCoeff = gridStruct(iteration).rayScatterCoeff;
-        SystemParam.n1              = gridStruct(iteration).nFiber;
-        SystemParam.nMetal          = gridStruct(iteration).nMetal;
-        SystemParam.waterInterface  = gridStruct(iteration).waterStatus;
-        SystemParam.scatterNum      = gridStruct(iteration).scatterNumber;
-        SystemParam.smaFillLength   = gridStruct(iteration).smaFillLength;
-        SystemParam.xLen            = gridStruct(iteration).xLen;
-        
-        % Special rule for sealed SMA connectors
-        if SystemParam.xLen >= 48.5e4
-            SystemParam.isSmaSealed = 1;
-        else
-            SystemParam.isSmaSealed = 0;
+        for b=1:length(iterVar)
+            SystemParam.(paramNames{iterVar(b)})=iterParams.(paramNames{iterVar(b)})(iteration);
         end
     end
 
-
     %calculate parameters that may need to use the changed iteration system
     SystemParam.alpha=(10^-6)*(imag(SystemParam.n1)*4*pi/(SystemParam.uvWavelength*10^-9))*10/log(10);%db/um overall absorption coefficient
-    % SystemParam.uvAlpha=alpha*(1-rayScatterCoeff);%db/um %ub absorption coeff
-    % SystemParam.rayleighAlpha=alpha*rayScatterCoeff;%db/um %rayleigh scattering absorption coefficient
     Xvec=0:(SystemParam.division/10e3):(SystemParam.xLen/10e3);
-
-    %%%%%%%setting up information for req number of random loops%%%%
+    if (SystemParam.waterInterface == 0) %medium values change to represent the water status
+        ext_media="External Medium: Air"; %string for excel document description
+        SystemParam.n5 = SystemParam.n2;          % RI of air
+        SystemParam.k = SystemParam.kAir;   % Attenuation Constant of air at 250nm cm^-1 (assuming exceptionally clear air )https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
+    else
+        SystemParam.n5 = SystemParam.nWater;         % RI of water
+        SystemParam.k = SystemParam.kWater;         %Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
+        ext_media="External Medium: Water"; %string for excel document description
+    end
+    if SystemParam.smaFillLength==0%if the fill length=0 there then its not sealed
+        SystemParam.isSmaSealed=0;
+    else
+        SystemParam.isSmaSealed=1;
+    end
+    % specific settings for simulating the Zhe 2023 et al paper [TODO: change for other simulations]
+    if SystemParam.xLen >= 48.5e4
+        SystemParam.isSmaSealed = 1;
+        SystemParam.waterStart=2.5*10^4;
+    else
+        SystemParam.isSmaSealed = 0;
+        SystemParam.waterStart=4.5*10^4;
+    end
+    %TODO: %%%%%%setting up information for req number of random loops%%%%
     %include if/then surface roughness/NP randomness and such statements
     %statements%%%%%%%%%%%%
-    
+
     %%%%% create the boundary struct for a glass fiber%%%%%%%
     Bounds = Bound;
     Bounds.Pf0=[0,SystemParam.fiberRadius];%boundary at starting position
     Bounds.Pfe=[SystemParam.xLen,SystemParam.fiberRadius];%boundary at ending position
-    
+
     %%Uniformity coefficient index set up for later calculation
     i1=round((((SystemParam.xLen/10000)-1)/(SystemParam.division*10^-4))*(0.1))+1;
     i6=round((((SystemParam.xLen/10000)-2)/(SystemParam.division*10^-4))*(0.6))+1;
-    
-    
+
+
     %set up of incoming ray angle, intensity, for a variable number of fibers
     LED_d=SystemParam.ledDistance;%(um)%LED distance in um for Entering Light
     [Ray_X,Ray_Y,alpha_ang,beta_ang,Power_mat] = OutputLED3D(SystemParam);
@@ -216,21 +207,21 @@ for iteration = 1:it_num
             %include NP distribution
             for xx=1:a
                 for yy=1:b
-                   %dont need to bother iterating through no intensity
-                   if Ent_Int(xx,yy,h)==0
-                       continue
-                   end
+                    %dont need to bother iterating through no intensity
+                    if Ent_Int(xx,yy,h)==0
+                        continue
+                    end
 
                     %measurement storage vectors
                     meas.points= zeros(2*10e6,2);
                     meas.inten = zeros(2*10e6,1);
                     meas.counter=1;
                     meas.sum=0;
-                    
+
                     Global_Index=[iteration,h,aa,xx,yy];%record the index values, may need to include a gg if scatter cone at the front
                     Y_sum=zeros(size(Xvec));
                     %create a scatter cone
-                    if SystemParam.frontScatter==1
+                    if SystemParam.frontScatter==1 %scatter cone condition
                         [I_scatter,Theta_enter]=scatter_cone(SystemParam,Theta(xx,yy,h),1);
                         I_enter=I_scatter.*Ent_Int(xx,yy,h);
                         gg_max=length(I_scatter);
@@ -242,18 +233,14 @@ for iteration = 1:it_num
                     %tracking and summing values for each ray
                     %temporary storage of data
                     [ray, meas, MEAS0] = runSimulation(SystemParam, ray, meas, Bounds, Global_Index, Tally, ...
-                                        gg_max, I_enter, Theta_enter, ...
-                                        aa, xx, yy, h, y0);
+                        gg_max, I_enter, Theta_enter, ...
+                        aa, xx, yy, h, y0);
 
                     ray.pow_side(aa,xx,yy)=sum(meas.inten)-MEAS0;
 
                     total_pow_use=[ray.pow_side(aa,xx,yy),ray.transmitted(aa,xx,yy),...
-                                ray.SMAabs(aa,xx,yy),ray.b2hpow(aa,xx,yy),...
-                                ray.backscat(aa,xx,yy),ray.absorbed(aa,xx,yy),ray.cutoffpow(aa,xx,yy)];
-                
-                    % Tracking differences
-                    % [Tally,Differenceamount,Diffamountpos] =  DifTrack(ray.Pow_enter(aa,xx,yy),total_pow_use,SystemParam,'total while loop',0,Global_Index,Tally);
-                    % ray.remaininglosses(aa,xx,yy)=Differenceamount;
+                        ray.SMAabs(aa,xx,yy),ray.b2hpow(aa,xx,yy),...
+                        ray.backscat(aa,xx,yy),ray.absorbed(aa,xx,yy),ray.cutoffpow(aa,xx,yy)];
 
                     %store measured data
                     %only include values that exist
@@ -268,12 +255,12 @@ for iteration = 1:it_num
                     trial(1).meas_points(xxyy_ind,aa)=ray.meas_points(aa,xx,yy);%assign measured points to a row vector
                 end
             end
-            
+            %
             meas_point_aa=cell2mat(trial(1).meas_points(:,aa));
             meas_inten_aa=cell2mat(trial(1).meas_inten(:,aa));
-            if any(meas_inten_aa)
+            if any(meas_inten_aa)%if any intensity is measured leaving the fiber
                 disp('any')
-                   [XVEC,Y, lengthPlot,pow_side_total] = Bins032725(meas_point_aa, meas_inten_aa, SystemParam.division, xLen, fiberRadius,SystemParam);
+                [XVEC,Y, lengthPlot,pow_side_total] = Bins032725(meas_point_aa, meas_inten_aa, SystemParam.division, SystemParam.xLen, fiberRadius,SystemParam);
                 use_index=find(meas_point_aa(:,1)>=(2.5*10^4));%indexes of all of the measurement points that correspond to measurable light after the sma
                 water_st_index=find(meas_point_aa(:,1)>=SystemParam.waterStart);
                 SMA_index=find(meas_point_aa(:,1)<=SystemParam.smaTotalLength);
@@ -286,23 +273,24 @@ for iteration = 1:it_num
                 trial(1).Y(aa,1)=Y;
                 Ylocal=cell2mat(Y);%local version of the I(x) vector
                 trial(1).UC(1,aa)=Ylocal(i6)/Ylocal(i1);
-            else
+            else%no measured intensity leaving the fiber
+                %set up to plot a 0 line
                 incr=SystemParam.division*10^-4;
                 if SystemParam.SMA==1
                     num_max = floor(((SystemParam.xLen/10e3)-(SystemParam.smaTotalLength/10e3))/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
-                
-                    XVEC = zeros(1,num_max+2);    
-                
+
+                    XVEC = zeros(1,num_max+2);
+
                     %first two measurement points will be within the SMA flush length
                     Inc1=SystemParam.smaFlushLength*10^-4;
                     Inc2=(SystemParam.smaTotalLength-SystemParam.smaFlushLength)*10^-4;
-                    
+
                     %first two points have irregular indexes if a part of the sma connector
                     XVEC(1)=-(Inc2+Inc1);
                     XVEC(2)=-Inc1;
                     XVEC(3:end)=0:incr:(incr*(num_max-1));
                 else
-                  num_max = floor((SystemParam.xLen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
+                    num_max = floor((SystemParam.xLen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
 
                     XVEC=0:incr:(incr*(num_max-1));
                 end
@@ -317,11 +305,11 @@ for iteration = 1:it_num
             end
             %update numRandomIters storage
             %summing storage
-            
+
             trial(1).Pow_enter(1,aa)=sum(ray.Pow_enter(aa,:,:),'all');
-            trial(1).transmitted(1,aa)=sum(ray.transmitted(aa,:,:),'all');
-            trans_pow=trial(1).transmitted(1,aa).*pi*(SystemParam.fiberRadius*10^-4)^2
-    
+            trial(1).transmitted(1,aa)=sum(ray.transmitted(aa,:,:),'all');%(uW/cm2)
+            trans_pow=trial(1).transmitted(1,aa).*pi*(SystemParam.fiberRadius*10^-4)^2%(uW)
+
             trial(1).RatioIsIt(aa,xx,yy)=trial(1).pow_side(1,aa)/trial(1).transmitted(1,aa);
             trial(1).pow_side(1,aa)=pow_side_total;
             trial(1).pow_side_use(1,aa)=pow_side_use;
@@ -337,40 +325,32 @@ for iteration = 1:it_num
             trial(1).cutoffpow(1,aa)=sum(ray.cutoffpow(aa,:,:),'all');
             %average metrics
             trial(1).RatioIsIt(1,aa)= trial(1).pow_side_use(1,aa)./trial(1).transmitted(1,aa);
-    
-            
-            %trial(2).Y(aa,1)={std(cell2mat(ray.Y(aa,:,:)))};          
-            %actually have to calculate this one
-            trial(1).remaininglosses=trial(1).Pow_enter(1,aa)-(trial(1).pow_side(1,aa)+trial(1).transmitted(1,aa)+trial(1).SMAabs(1,aa)+trial(1).b2hpow(1,aa)+trial(1).backscat+ trial(1).absorbed(1,aa)+trial(1).cutoffpow(1,aa));
+            trial(1).remaininglosses(1,aa)=trial(1).Pow_enter(1,aa)-(trial(1).pow_side(1,aa)+trial(1).transmitted(1,aa)+trial(1).SMAabs(1,aa)+trial(1).b2hpow(1,aa)+trial(1).backscat+ trial(1).absorbed(1,aa)+trial(1).cutoffpow(1,aa));
+            % TODO: include a place to plot instant numRandomIters and
+            % standard deviations
 
-            % TODO: include a place to plot instant numRandomIters
-            
         end
-
+        %store the fiber results
         [FibIt, SumVal] = storeFiberResults(FibIt, SumVal, iteration, h, trial, numRandomIters);
 
-        % TODO: Needs refreshing after data format update
+        % TODO: auto plot the results of each run examined
         plotResults();
 
         if (writeToFile == 1)
-            writeResults(SystemParam, description, filename, sheetNum, iteration, h, FibIt, c, legendMain, numRandomIters, LED_d, XVEC)
+            writeResults(SystemParam,paramNames, description, filename, sheetNum, iteration, it_num,h, FibIt, c,topoffile,randvar,itdif,xlen2true)
         end
     end
-
+    %set a sound to alert you when this run is over
     if (sound == 1)
         load gong.mat%gong to signal the code is done handel.mat %chorus sound to signal the code is done %
-        sound(y)
+        sound(zed)
     end
 
 end
-% if yes_itname==1%if we need a legend bc there's multiple iterations
-%     legend(legendMain)
-% end
 
 hold off
 
 if (sound == 1)
     load gong.mat%gong to signal the code is done handel.mat %chorus sound to signal the code is done %
-    sound(y)
+    sound(zed)
 end
-
