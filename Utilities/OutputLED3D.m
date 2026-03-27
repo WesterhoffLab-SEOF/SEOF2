@@ -34,7 +34,6 @@ Iray_a=cos(alpha_ang).^m;
 Iray_b=cos(beta_ang).^m;
 Iray_ab=Iray_a.*transpose(Iray_b);%light intensity distribution at any location
 
-%Intensity=Iray_ab/((radialIndex^2)*sum(Iray_ab,'all'));%intensity normalized to 1 over entire LED
 Intensity=ones(angularIndex,angularIndex,radialIndex,radialIndex);
 %4D intensity values
 for i=radialIndex
@@ -43,7 +42,6 @@ for i=radialIndex
     end
 end
 Intensity=Intensity/sum(sum(sum(sum(Intensity))));
-% Intensity=Intensity/(sum(Intensity,'all'));%normalized 4D intensity values at x rot ang, y rot ang, x location, y location
 Intensity=Intensity.*initialIntensity;%4D intensity that sums to the total initialIntensity
 Int_total=sum(Intensity,'all');
 end

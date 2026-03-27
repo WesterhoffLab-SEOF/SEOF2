@@ -3,11 +3,18 @@ SMAFL=SystemParam.smaFlushLength;%=1*10^4;%the length of the SMA connector that 
 
         %determine the refractive indices && attenuation coefficients
         if SystemParam.SMA==1 && x<=SMAFL && x>=0 %if it's within the flush length of the SMA connector, lose the light
-        
-            n_medium=SystemParam.nMetal;
-            k_medium=SystemParam.kAir;
-            transmission=0; %multiply the transmission by this
-        elseif x<0%this case shouldnt occur but if it does... it's the internal housing
+            %select the refractive index and loss for the transmitting
+            %material within the flush length of the SMA connector
+            if SystemParam.isSmaSealed==1 && x <= SystemParam.smaFillLength %if we've sealed it with cytop, and are within the cytop fill region
+                n_medium=SystemParam.n4;
+                k_medium=SystemParam.kCytop;
+            else %if it isn't sealed with cytop, or if we're in the part of the SMA "above" the cytop fill level
+                n_medium=SystemParam.nMetal;
+                k_medium=SystemParam.kAir;
+            end
+            transmission=0; %%either way, all the transmitted lightwill be lost to the
+            %surface its touching, dont bother tracking "bounces"in the sma connector
+        elseif x<0%this case shouldnt occur but if it does... we're in the internal housing
             n_medium=SystemParam.n2;
             k_medium=SystemParam.kAir;
             transmission=1;
@@ -21,12 +28,9 @@ SMAFL=SystemParam.smaFlushLength;%=1*10^4;%the length of the SMA connector that 
             n_medium=SystemParam.n2;
             k_medium=SystemParam.kAir;
             transmission=1;
-        else
-%         elseif x <= SystemParam.xlen%otherwise the RI/attenuation coeff is that of the medium
+        else %we're in the selected main medium the fiber is submerged in
             n_medium=SystemParam.n5;
-            k_medium=SystemParam.k;%
+            k_medium=SystemParam.k;
             transmission=1;
-%         else
-%             error('x out of bounds')
         end
 end

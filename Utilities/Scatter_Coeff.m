@@ -1,6 +1,6 @@
 function [Scat_distrib] = Scatter_Coeff(SystemParam)
-%UNTITLED12 Summary of this function goes here
-%   Detailed explanation goes here
+% pre-allocate the rayleigh scatter cone losses for accessing in the
+% ContLoss.m function. reduces run time
 ni_vec=[SystemParam.n1,SystemParam.n2,SystemParam.n3,SystemParam.n4,SystemParam.nWater,SystemParam.nMetal];
 nt_vec=ni_vec;
 st=0;
@@ -66,18 +66,6 @@ for a=1:length(ni_vec)
                     I_sidedown(i)=I_range(i);
                     countSD=countSD+1;
                 else
-%                     disp('current theta')
-%                     disp(theta_distrib(i))
-%                     disp('Oc')
-%                     disp(theta_c)
-%                     disp(Oh)
-%                     disp('theta_bounds')
-%                     disp(theta_Fup)
-%                     disp(theta_Fdown)
-%                     disp(theta_Bup)
-%                     disp(theta_Bdown)
-%                     disp('I')
-%                     disp(I_range(i))
                     error('unallocated I_range')
                 end
             end

@@ -3,11 +3,11 @@ function [Ent_Int,Theta,y0,perc_hit,perc_ent,Entering_Int,Entering_angle,Enterin
 nt = SystemParam.n1;              % RI of Quartz Optical Fiber %refracted index
 ni = SystemParam.n2;              % RI of "gap"/air %air index
 %initialIntensity = SystemParam.initialIntensity;          % LED intensity, 50 mW
-        nhat=[-1 0];%surface of fiber is the flat cut end
-        horz_surf=0;%not a horizontal surface
-        direction=1;
-        %Ray_X and Ray_Y use (um), as does circles
-%r_fiber=SystemParam.rfiber; 
+nhat=[-1 0];%surface of fiber is the flat cut end
+horz_surf=0;%not a horizontal surface
+direction=1;
+%Ray_X and Ray_Y use (um), as does circles
+%r_fiber=SystemParam.rfiber;
 k_air = SystemParam.kAir*10^-4; %estimated light attenuation constant (1/cm)->(1/um) https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
 LED_dist=led_d;%*10^-3;%;mm
 [a,b,c,d]=size(Intensity_mat);
@@ -31,7 +31,7 @@ perc_hit=zeros(1,g);
 
 %for each fiber
 for q=1:g
-%empty vector set ups for within each fiber
+    %empty vector set ups for within each fiber
     Entering_Int=zeros(a,b,c,d);
     Inc_Int=zeros(a,b,c,d);
     Loss_Inc=zeros(a,b,c,d);
@@ -58,7 +58,7 @@ for q=1:g
                     %Inc_Int(k,l,i,j)=%Intensity_mat(k,l,i,j)./(4*pi*norm([Xnew,Ynew,Znew]-Pos_i_ray).^2);
                     Loss_Inc(k,l,i,j)=exp(-k_air*norm([Xnew,Ynew,Znew]-Pos_i_ray));
                     Inc_Int(k,l,i,j)=Intensity_mat(k,l,i,j).*Loss_Inc(k,l,i,j);%norm([Xnew,Ynew,Znew]-Pos_i_ray)*10^-1);%light intensity after attenuation in air
-                    
+
                     %check if the light hits a fiber by using the boolean
                     %image
                     %transform x and y coordinates of light vector to boolean
@@ -71,17 +71,17 @@ for q=1:g
                         Y_trans=1;
                     end
                     if (X_trans>0 && X_trans<=e) && (Y_trans>0 && Y_trans<=f) %if both of the position values are within the image range (outside also things wont hit_
-                    if circles(round(X_trans),round(Y_trans),q)==1
-                        %3d storage
-                        light_entering(1,q)=light_entering(1,q)+Inc_Int(k,l,i,j);
-                        Entering_Int(k,l,i,j)=Inc_Int(k,l,i,j);
-                        Entering_angle(k,l,i,j)=acos(dot(dir_vec,transpose([0,0,1])));%entering angle off of normal
-                        Entering_X(k,l,i,j)=Xnew;
-                        Entering_Y(k,l,i,j)=Ynew;
-                         %flattening to 2-D
-                        Entering_rad(k,l,i,j)=sqrt(Xnew^2+Ynew^2);
-                        
-                    end
+                        if circles(round(X_trans),round(Y_trans),q)==1
+                            %3d storage
+                            light_entering(1,q)=light_entering(1,q)+Inc_Int(k,l,i,j);
+                            Entering_Int(k,l,i,j)=Inc_Int(k,l,i,j);
+                            Entering_angle(k,l,i,j)=acos(dot(dir_vec,transpose([0,0,1])));%entering angle off of normal
+                            Entering_X(k,l,i,j)=Xnew;
+                            Entering_Y(k,l,i,j)=Ynew;
+                            %flattening to 2-D
+                            Entering_rad(k,l,i,j)=sqrt(Xnew^2+Ynew^2);
+
+                        end
                     end
                 end
             end
@@ -92,28 +92,20 @@ for q=1:g
     %flattening to 2D for each fiber
     for i=1:c
         for k=1:a
-         incoming_int(k,i,q)=sum(sum((Entering_Int(k,:,i,:))));%total amount of intensity entering
-         incoming_ang(k,i,q)=sum(sum((Entering_angle(k,:,i,:))))/(b*d);%average angle
-%         incoming_int(k,i,q)=sum(Entering_Int(k,:,i,:),'all');%total amount of intensity entering
-%         incoming_ang(k,i,q)=sum(Entering_angle(k,:,i,:),'all')/(b*d);%average angle
-        vi=[cos(incoming_ang(k,i,q)),sin(incoming_ang(k,i,q))];%entering direction vector
-        [theta_i,theta_t,theta_c,theta_ih,~,~,~,~] = Snells(vi,nhat,ni,nt,horz_surf,direction);
-        [~,Ent_Int(k,i,q)]=FresnelEq(incoming_int(k,i,q),SystemParam,theta_i,theta_t,theta_c,theta_ih,ni,nt,horz_surf);
-        y0(k,i,q)=sign(Ray_X(i))*sum(sum(Entering_rad(k,:,i,:)))/(b*d);%average y0
-        Theta(k,i,q)=sign(alpha_ang(k))* theta_t;
+            incoming_int(k,i,q)=sum(sum((Entering_Int(k,:,i,:))));%total amount of intensity entering
+            incoming_ang(k,i,q)=sum(sum((Entering_angle(k,:,i,:))))/(b*d);%average angle
+            vi=[cos(incoming_ang(k,i,q)),sin(incoming_ang(k,i,q))];%entering direction vector
+            [theta_i,theta_t,theta_c,~,~,~,~,~] = Snells(vi,nhat,ni,nt,horz_surf,direction);
+            [~,Ent_Int(k,i,q)]=FresnelEqSEOFv2(incoming_int(k,i,q),theta_i,theta_t,theta_c,ni,nt);
+            y0(k,i,q)=sign(Ray_X(i))*sum(sum(Entering_rad(k,:,i,:)))/(b*d);%average y0
+            Theta(k,i,q)=sign(alpha_ang(k))* theta_t;
         end
     end
     total_act_Ent_Int=sum(Ent_Int(:,:,q),'all');
     initialIntensity_check=initialIntensity;
-     perc_hit(q)=total_entering_int/initialIntensity;%perc_hit(q)=sum(sum(incoming_int(:,:,q)))/initialIntensity;
-     perc_ent(q)=total_act_Ent_Int/initialIntensity;%sum(Ent_Int(:,:,q),'all')/initialIntensity;  %%    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/initialIntensity;    
+    perc_hit(q)=total_entering_int/initialIntensity;%perc_hit(q)=sum(sum(incoming_int(:,:,q)))/initialIntensity;
+    perc_ent(q)=total_act_Ent_Int/initialIntensity;%sum(Ent_Int(:,:,q),'all')/initialIntensity;  %%    perc_ent(q)=sum(sum(Ent_Int(:,:,q)))/initialIntensity;
 end
 
-
-    
-
-
-                    
-                    
 end
 

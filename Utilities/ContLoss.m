@@ -1,6 +1,5 @@
 function [I_remaining,I_sideemit,I_sideemit_in,I_losstot,V_sideemit,P_sidemit,IT,Tally]=ContLoss(V_in,I_in,P,dtrav,bound,ni1,nt1,theta_i,SystemParam,Tally,IT,Global_Index)
 %function for applying the continuous losses, including side scattering and absorption losses, at every dx
-%[I_remaining,I_sideemit,P_sidemit,IT,Tally]=ContLoss(V_in,I_in,P,[dx,dy],bound,ni,nt,nhat,theta_i,theta_c,SystemParam,Tally,IT,Global_Index]
 %starting metrics for tracking possible differences
 Cutoff0=IT.cutoffi;Abs0=IT.absorbi;House0=IT.housi;Approx0=IT.approxi;Back0=IT.backi;Trans0=IT.transi;B2h0=IT.b2hi;
 %CURRENTLY ONLY APPLICABLE FOR HORIZONTAL SURFACES
@@ -70,7 +69,6 @@ I_scatup=I_scat_tot*Sideup;
 I_scatdown=I_scat_tot*Sidedown;
 I_rem2=I_rem1-I_scat_tot;%remaining light after the scattered amount is removed
 %determine the approx distance the scatter light travels in
-% disp(Forward+Backward+Sideup+Sidedown)
 ydir=sign(V_in(2));
 if ydir==0
     ydir=1;
@@ -91,19 +89,17 @@ I_scat_inup=I_scatup*(10^(-alpha*dy_scatup/10));
 I_scat_indown=I_scatdown*(10^(-alpha*dy_scatdown/10));
 %do fresnell eq to see what transmits
 if any(I_scat_inup)% if the value isn't 0
-    [I_scatup_reflect,I_scatup_transmit]=FresnelEq(I_scat_inup,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni_c,nt_c,horz_surf);
+    %[I_scatup_reflect,I_scatup_transmit]=FresnelEq(I_scat_inup,SystemParam,theta_i,theta_t,theta_c,theta_ih,ni_c,nt_c,horz_surf);
+    [I_scatup_reflect,I_scatup_transmit]=FresnelEqSEOFv2(I_scat_inup,theta_i,theta_t,theta_c,ni_c,nt_c);
 else
     I_scatup_reflect=0;I_scatup_transmit=0;
 end
 if any(I_scat_indown)
-    [I_scatdown_reflect,I_scatdown_transmit]=FresnelEq(I_scat_indown,SystemParam,theta_i,theta_t,theta_ih,theta_c,ni_c,nt_c,horz_surf);
+    %[I_scatdown_reflect,I_scatdown_transmit]=FresnelEq(I_scat_indown,SystemParam,theta_i,theta_t,theta_ih,theta_c,ni_c,nt_c,horz_surf);
+    [I_scatdown_reflect,I_scatdown_transmit]=FresnelEqSEOFv2(I_scat_indown,theta_i,theta_t,theta_c,ni_c,nt_c);
 else
     I_scatdown_reflect=0;I_scatdown_transmit=0;
 end
-%track differences here if there's an issue
-% % [Tally,~,~] =  DifTrack(I_scatup,[I_scat_absorbedup,I_scatup_reflect,I_scatup_transmit],SystemParam,'Intensity for Scatup in ContLoss',1,Global_Index,Tally);
-% % [Tally,~,~] =  DifTrack(I_scatdown,[I_scat_absorbeddown,I_scatdown_reflect,I_scatdown_transmit],SystemParam,'Intensity for Scatdown in ContLoss',1,Global_Index,Tally);
-
 
 %won't continue to follow the reflected scatter light, record as an
 %approximation
@@ -135,9 +131,6 @@ if isnan(I_remaining)
 elseif ~any(I_remaining)
     error('I remaining is empty')
 end
-% %  Pow_Out=[I_remaining,I_sideemit,(IT.cutoffi-Cutoff0),(IT.absorbi-Abs0),(IT.housi-House0),(IT.approxi-Approx0),(IT.backi-Back0),(IT.transi-Trans0),(IT.b2hi-B2h0)];
-% % [Tally,~,~] =  DifTrack(I_in,Pow_Out,SystemParam,'ContLoss total',1,Global_Index,Tally);
-% % [Tally,~,~] =  inOutTrack(I_in,I_sideemit,SystemParam,'ContLoss total',1,Global_Index,Tally);
 if I_remaining<0
     error('Negative I remaining in conttrav')
 end

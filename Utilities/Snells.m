@@ -13,7 +13,7 @@ if length(nhat)==3
     nhat=nhat(1:2);%z direction is never used in the 2d model but just in case
 end
 if(horz_surf==1)%impacting horizontal surface
-    nv=[0,dirmult*-1];%normal vector is opposite the y dir of the impacting 
+    nv=[0,dirmult*-1];%normal vector is opposite the y dir of the impacting
     Rcw90=[0,1;-1,0];%90 degree clockwiserotation matrix
     n_hor=transpose(Rcw90*transpose(nv));%the horizontal vector is 90 deg rotated from the vertical vector
     n_=nhat.*[1,dirmult];%make sure it's going opposite of dir vector (convention is to set it as [dy/dx,-1], or [-1,dx/dy]
@@ -68,14 +68,14 @@ else%impacting vertical surface
     end
 end
 %Rotate back to normal
-    %V_in_check=transpose(Rcw*transpose(Vinp));
-    V_reflect=transpose(Rcw*transpose(Vrefp));
-   
-    V_transmit=transpose(Rcw*transpose(Vtransp));
-    if sign(V_reflect(1))*sign(Vin(1))==-1
-        direction=-1*direction;
-    end
-    %angle of the V_reflect vector off of the horizontal
-    theta_rh=sign(V_reflect(2))*abs(asin(norm(cross([V_reflect,0],[direction,0,0])/(norm([V_reflect,0])*norm([direction,0,0])))));%+/- based on V_reflect ydir
-    
+%V_in_check=transpose(Rcw*transpose(Vinp));
+V_reflect=transpose(Rcw*transpose(Vrefp));
+
+V_transmit=transpose(Rcw*transpose(Vtransp));
+if sign(V_reflect(1))*sign(Vin(1))==-1
+    direction=-1*direction;
+end
+%angle of the V_reflect vector off of the horizontal
+theta_rh=sign(V_reflect(2))*abs(asin(norm(cross([V_reflect,0],[direction,0,0])/(norm([V_reflect,0])*norm([direction,0,0])))));%+/- based on V_reflect ydir
+
 end

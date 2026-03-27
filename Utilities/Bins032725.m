@@ -1,4 +1,4 @@
-function [x2,Y2_cell, num_max,Total_side] = Bins(x1,y1, incr, xlen, rad,SystemParam)
+function [x2,Y2_cell, num_max,Total_side] = Bins032725(x1,y1, incr, xlen, rad,SystemParam)
 % Collects all data points and sums light in given increments
 %emissions divided by the surface area of the fiber section to calculate per cm2
 %INPUTS:: x1(:,1)= measurement location x (cm), x1(:,2)= measurement location y (cm),
@@ -33,11 +33,10 @@ if SystemParam.SMA==1
     indX2=intersect(indX2_1,indX2_2);%logical intersection
     totalY1=sum(y1_short(indX1));
     totalY2=sum(y1_short(indX2));
-    y2(1)=totalY1;%/(2*pi*Inc1*radius);
-    y2(2)=totalY2;%/(2*pi*Inc2*radius);
+    y2(1)=totalY1;%
+    y2(2)=totalY2;%
     start_pos=3;%the initial vector;
     adj_for_sma=1;%don't adjust the start and stop indexes for the sma connector
-    %xa_short=xa_short-x2(1);%make everything -2.5cm
 else%if no sma connector
     num_max = floor((xlen/10e3)/(incr))+1;%dividing length of fiber by the increments, then adding one to have data at each end of bin
     x2 = zeros(1,num_max);
@@ -74,19 +73,6 @@ for i=1:num_max-1
     y2(ind2)=totaly2;%/(2*pi*incr*radius);
 end
 
-
-% for i=0:num_max-1
-%     start = incr*i;
-%     stop = start+incr;
-%     total = 0;
-%     for a=1:length(xa_short)
-%         if (xa_short(a)>=start) && (xa_short(a) <= stop) && (y1_short(a) > 0)
-%             total = total + y1_short(a);
-%         end
-%     end
-%     x2(i+1) = start;
-%     y2(i+1) = total/(2*pi*incr*radius);% sum of light divided by surface area of section
-% end
 %setting final value
 
 x2(end)=xlen/10e3-(incr/2)-(adj_for_sma*(Inc2+Inc1));%want value 0.5cm from the tip of the fiber, if we adjust for sma all x values sub -2.5cm
