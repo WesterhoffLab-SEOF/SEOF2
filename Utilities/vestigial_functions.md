@@ -2,6 +2,6 @@
 Main ->
 - initializeTally.m
 - plotTallyStruct.m
-Utilities->
-- DifTrack.m
-- inOutTrack.m
+- Utilities->
+-   DifTrack.m
+-   inOutTrack.m
