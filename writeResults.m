@@ -1,79 +1,86 @@
-function res = writeResults(SystemParam, description, filename, sheetNum, iteration, h, FibIt, c, legendMain, aa_lim, LED_d, XVEC)
+function res = writeResults(SystemParam,iterParamfields, description, filename, sheetNum, iteration, it_num,h, FibIt, c,topoffile,randvar,itdif,xlen2true)
+%write results of simulation to organized excel table that will be easier
+%to import for data analysis
 
-if (SystemParam.waterInterface == 0)
-    ext_media="External Medium: Air"; %string for excel document description
-else
-    ext_media="External Medium: Water"; %string for excel document description
-end
+%current organization of data is deisgned for variable analysis for Shapiro et. al, 2025 paper 
+% by running 12.5 (air and water) and 50.5cm (air only) fiber simulations for each variable set
 
-%documentation of variables used in the 1st row
+
+for jj=1:(randvar+1)
+    %if randvar=0 then this wont change anything
 if c>1 %if multiple fibers
+    if it_num>1%if there are multiple iterations
+        %put all the fibers within a single iteration in the same sheet,
+        %move the iterations to different sheets
+        if randvar==0
+            sheetnum=iteration;
+        else
+            sheetnum=iteration*(randvar+1)-1+(jj-1);
+        end
+    linenum=7+(h-1);
+    if sheetnum>1
+        writecell(topoffile,filename,'Sheet',sheetnum,'Range',"A1");
+    end
+    else
+        linenum=7+(h-1);
+        sheetnum=sheetNum;
+    end
+    writematrix('fiber no.',filename,'Sheet',sheetnum,'Range',"B6");
+    writematrix(h,filename,'Sheet',sheetnum,'Range',"B"+num2str(linenum));
     description=description + " fiber no. " +h;
+else
+    sheetnum=sheetNum+(jj-1);
+    linenum=7+(iteration-1);
+    writematrix(iteration,filename,'Sheet',sheetnum,'Range',"B"+num2str(linenum));
 end
-writematrix(description, filename,'Sheet', sheetNum + (h-1),'Range', "A1");
-writematrix(" iteration; " + iteration +", "+ legendMain(iteration), filename,'Sheet', sheetNum + (h-1),'Range', "A"+ num2str((6*iteration)-2));
-writematrix("Separation Distance: " + SystemParam.ledDistance + " (um)", filename,'Sheet', sheetNum + (h-1),'Range', "B1");
-writematrix("Wavelength; " + SystemParam.uvWavelength + "(nm)", filename,'Sheet', sheetNum + (h-1),'Range', "C1");
-writematrix("Angle resolution: " + SystemParam.angleNum, filename,'Sheet', sheetNum + (h-1),'Range', "E1");
-writematrix("initial intensity Entering the Fiber: " + SystemParam.initialIntensity + " (mW)", filename,'Sheet', sheetNum + (h-1),'Range', "F1");
-%         writematrix("Polymer coat: " + SystemParam.polymerCoat, filename,'Sheet', sheetNum + (h-1),'Range', "G1");
-%         writematrix("Polymer thickness (if true): " + polymer_thickness + " (nm)", filename,'Sheet', sheetNum + (h-1),'Range', "H"+ num2str(iteration));
-%         writematrix("Nanoparticle Density: " + np_density, filename,'Sheet', sheetNum + (h-1),'Range', "I1");
-%         writematrix("Nanoparticle Layer Thickness: " + np_thickness + " (nm)", filename,'Sheet', sheetNum + (h-1),'Range', "J1");
-%         writematrix("Nanoparticle Diameter: " + SystemParam.particle_dmtr + " (nm)", filename,'Sheet', sheetNum + (h-1),'Range', "K1");
-%writematrix("# of Mie vectors considered: " + num_vectors, filename,'Sheet', sheetNum + (h-1),'Range', "L1");   
-%writematrix("Measurement distance: " + SystemParam.measDistance + ( "um"), filename,'Sheet', sheetNum + (h-1),'Range', "M1");
-writematrix(ext_media, filename,'Sheet', sheetNum + (h-1),'Range', "N1");
-writematrix("# of for loops used to smooth random noise: " + aa_lim, filename,'Sheet', sheetNum + (h-1),'Range', "O1");
-writematrix("Length of fiber division in plot: " + (SystemParam.division/10e3) + " (cm)", filename,'Sheet', sheetNum + (h-1),'Range', "P1");
-writematrix("Photons Considered: " +SystemParam.numLedRays + ", Angles Considered: "+  SystemParam.angleNum, filename,'Sheet', sheetNum + (h-1),'Range', "Q1");
-writematrix("Number Fibers: " +SystemParam.numFibers, filename,'Sheet', sheetNum + (h-1),'Range', "R1");
-
-housepow=1;
-%iteration values
-
-writematrix("Fiber length: " + (SystemParam.xLen/10000) + " (cm)", filename,'Sheet', sheetNum + (h-1),'Range', "A" + num2str((6*iteration)-3));
-writematrix("Radius of fiber: " + SystemParam.fiberRadius + " (um)", filename,'Sheet', sheetNum + (h-1),'Range', "B" + num2str((6*iteration)-3));
-writematrix("Distance of LED from Fiber: " +LED_d + " (um)", filename,'Sheet', sheetNum + (h-1),'Range', "C"+ num2str((6*iteration)-3));
-writematrix("Complex Refractive Index of Fiber:" + SystemParam.n1, filename,'Sheet', sheetNum + (h-1),'Range', "D"+ num2str((6*iteration)-3));
-writematrix("Complex Refractive Index of Metal:" + SystemParam.nMetal, filename,'Sheet', sheetNum + (h-1),'Range', "D"+ num2str((6*iteration)-2));
-
-%documentation of the data generated in the iteration
-writematrix("Total light entering the fiber: " + FibIt(1).Pow_enter(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "E" + num2str((6*iteration)-3));
-writematrix("Total transmitted light; " + FibIt(1).transmitted(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "F" + num2str((6*iteration)-3));
-writematrix("Total side emitted light; " + FibIt(1).pow_side(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "G" + num2str((6*iteration)-3));
-writematrix("Total useable side emitted light; " + FibIt(1).pow_side_use(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "H" + num2str((6*iteration)-3));
-writematrix("Total side emitted light w/in the SMA: " + FibIt(1).SMA_pow_side(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "I" + num2str((6*iteration)-3));
-writematrix("Total adsorbed light: " + FibIt(1).absorbed(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "J" + num2str((6*iteration)-3));
-writematrix("Total back scattered light: " + FibIt(1).backscat(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "K" + num2str((6*iteration)-3));
-writematrix("Total SMA adsorbed light: " + FibIt(1).SMAabs(iteration,h)+ " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "L" + num2str((6*iteration)-3));
-writematrix("Total approximation loss light: " + FibIt(1).approxpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "M" + num2str((6*iteration)-3));
-writematrix("Total back 2housing loss light: " + FibIt(1).b2hpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "N" + num2str((6*iteration)-3));
-writematrix("Total cutoff loss light: " + FibIt(1).cutoffpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "O" + num2str((6*iteration)-3));
-writematrix("Total remaining light loss: " + FibIt(1).remaininglosses(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "P" + num2str((6*iteration)-3));
-writematrix("Avg Uniformity Cofficient: " + FibIt(1).UC(iteration,h), filename,'Sheet', sheetNum + (h-1),'Range', "Q" + num2str((6*iteration)-3));
-writematrix("Avg Is/It Ratio: " + FibIt(1).RatioIsIt(iteration,h) , filename,'Sheet', sheetNum + (h-1),'Range', "R" + num2str((6*iteration)-3));
-writematrix("Total water st side emitted light; " + FibIt(1).pow_side_waterst(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "S" + num2str((6*iteration)-3));
-
-%documentation of the std deviation of the generated data
-if aa_lim>1
-    writematrix(FibIt(2).Pow_enter(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "E" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).transmitted(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "F" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).pow_side(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "G" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).pow_side_use(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "H" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).SMA_pow_side(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "I" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).absorbed(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "J" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).backscat(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "K" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).SMAabs(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "L" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).approxpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "M" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).b2hpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "N" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).cutoffpow(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "O" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).remaininglosses(iteration,h) + " (uW)", filename,'Sheet', sheetNum + (h-1),'Range', "P" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).UC(iteration,h), filename,'Sheet', sheetNum + (h-1),'Range', "Q" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).RatioIsIt(iteration,h) , filename,'Sheet', sheetNum + (h-1),'Range', "R" + num2str((6*iteration)-2));
-    writematrix(FibIt(2).pow_side_waterst(iteration,h), filename,'Sheet', sheetNum + (h-1),'Range', "S" + num2str((6*iteration)-2));
+Paramcurrent=cell(1,length(iterParamfields));   
+for v=1:length(iterParamfields)
+Paramcurrent{v}=SystemParam.(iterParamfields{v});
 end
-%side emission over a the fiber distance and iteration
-writematrix(XVEC,filename,'Sheet', sheetNum + (h-1),'Range', "A" + num2str((6*iteration)-1));
-writematrix(cell2mat(FibIt(1).Y(iteration,h)),filename,'Sheet', sheetNum + (h-1),'Range', "A" + num2str((6*iteration)));
-writematrix(cell2mat(FibIt(2).Y(iteration,h)),filename,'Sheet', sheetNum + (h-1),'Range', "A" + num2str((6*iteration)+1));
+    writecell({filename},filename,'Sheet',sheetnum,'Range',"A"+num2str(linenum))
+    writecell(Paramcurrent,filename,'Sheet',sheetnum,'Range',"C"+num2str(linenum));
+    writematrix(imag(SystemParam.n1),filename,'Sheet',sheetnum,'Range',"F"+num2str(linenum))
+    %summary data
+    writematrix(FibIt(jj).pow_side_waterst(iteration,h),filename,'Sheet',sheetnum,'Range',"U"+num2str(linenum))
+    writematrix(FibIt(jj).transmitted(iteration,h),filename,'Sheet',sheetnum,'Range',"V"+num2str(linenum))
+    if SystemParam.waterInterface==1
+        newlinenum=linenum-itdif(2);
+        if newlinenum<1
+            newlinenum=linenum;
+        end
+        writematrix(FibIt(jj).pow_side_waterst(iteration,h),filename,'Sheet',sheetnum,'Range',"W"+num2str(newlinenum))
+    end
+
+    %write the Ee(x) values to the files
+    if SystemParam.SMA==1
+            EeX0end0=cell2mat(FibIt(jj).Y(iteration,h));
+            EeX0end=EeX0end0((floor(SystemParam.smaTotalLength*10^-4)+1):end);
+    elseif SystemParam.SMA==0
+            EeX0end=cell2mat(FibIt(jj).Y(iteration,h));
+
+    end
+    if SystemParam.xLen==50.5*10^4
+        %write to the 50.5 start location (AM6)
+        writematrix(EeX0end,filename,'Sheet',sheetnum,'Range',"AM"+num2str(linenum))
+        if xlen2true%if we're also looking at 12.5 cm lengths in other versions
+        newlinenum=linenum-itdif(1);
+        if newlinenum<1
+            newlinenum=linenum;
+        end
+        writematrix(EeX0end,filename,'Sheet',sheetnum,'Range',"AM"+num2str(newlinenum))        
+        end
+    else%otherwise all other irradiance vectors start at z
+        writematrix(EeX0end,filename,'Sheet',sheetnum,'Range',"Z"+num2str(linenum))
+    end
+    %write everything stored for power accounting to out of the way place
+    fibItname=fieldnames(FibIt);
+    A=cell(1,length(fibItname));
+    for w=1:(length(fibItname)-1)%
+        A{1,w}=FibIt(jj).(fibItname{w})(iteration,h);
+    end
+    A{1,end}=cell2mat(FibIt(jj).Y(iteration,h));
+        % struct2cell(FibIt(jj));%cellfun(@(f) FibIt(jj).(f)(iteration,h),FibIt(jj).(f), 'UniformOutput',false);%create an array of the lengths of each vector in each field
+    
+    writecell(A,filename,'Sheet',sheetnum,'Range',"CL"+num2str(linenum)) 
+
+end
