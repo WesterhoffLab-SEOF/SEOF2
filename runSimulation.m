@@ -127,7 +127,7 @@ function [ray, meas, MEAS0] = runSimulation(SystemParam, ray, meas, Bounds, Glob
                 indices_assign=indices_assign(indices_assign<=max_loop);%make sure  the indices are under the max value
                 %sort the incoming vector to prioritize highest
                 %bvalues to be assigned to the vector
-                [I_sort_scat,sort_scat]=sort(I_scat,'descend');
+                [~,sort_scat]=sort(I_scat,'descend');
                 
                 if ~isempty(indices_assign)%otherwise, nothing will need to be assigned to the loop vector
                     if end_index>max_loop%if there aren't enough spots to allocate all new I_sorted
@@ -164,10 +164,7 @@ function [ray, meas, MEAS0] = runSimulation(SystemParam, ray, meas, Bounds, Glob
             %                     disp('end reflect')
             Pow_Out=[meas_dif,sum_forwardscat,cut_off,I_trans,b2h];
             dif_endref=I_1-sum(Pow_Out);
-    % %                                 [Tally,Differenceamount,Diffamountpos] =  DifTrack(I_1,Pow_Out,SystemParam,'End Reflect',0,Global_Index,Tally);
-    % %                                 ray.approxpow_dif(aa,xx,yy)=Differenceamount+ray.approxpow_dif(aa,xx,yy);%sum of power differences due to difference in approximations
-    % %                                 ray.approxpow_pos(aa,xx,yy)=Diffamountpos+ray.approxpow_pos(aa,xx,yy);%sum of total power diff
-            
+   
             %set the just used I_in to 0
             I_in(1,while_num)=0;
             
@@ -197,13 +194,8 @@ function [ray, meas, MEAS0] = runSimulation(SystemParam, ray, meas, Bounds, Glob
             smaabs_final=ray.SMAabs(aa,xx,yy)-smaabs0;
             approx_final=ray.approxpow(aa,xx,yy)-approx0;
             back_final=ray.backscat(aa,xx,yy)-back0;
-            %                     disp('while loop')
-            %                     start=[I_0,meas_start0,b2h0,cutoff0,trans0,abs0,smaabs0,approx0]
             Pow_out=[sum_forwardscat,meas_dif_final,b2h_final,cutoff_final,trans_final,abs_final,smaabs_final,approx_final,back_final];
-            %                     approx_dif_final=ray.approxpow_dif(aa,xx,yy)-approxdif0;
-    % %                                 [Tally,~,~] =  DifTrack(I_0,Pow_Out,SystemParam,'while loop',0,Global_Index,Tally);
             
         end
-        %summing all of the measured side emitted power
     end
 end
