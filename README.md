@@ -9,3 +9,5 @@ If you would like to make use of this code for your own research, and alter or i
 
 
 [FULL CITATION TO BE ADDED]
+
+Note: some functions/functionality are incomplete, such as the plotting capabilities in plotResults.m. The files write to excel fine and way things are written allows you to make your own plots relatively easily, but feel free to implement
