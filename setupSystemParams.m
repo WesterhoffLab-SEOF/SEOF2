@@ -1,4 +1,112 @@
 function SystemParam = setupSystemParams()
+% set the core variables used by the program manually
+SystemParam = SysParam; %assign struct variable
+
+%% light variables
+SystemParam.uvWavelength = 280;                                             % wavelength of UV light in nmisplacement dependent radiation for LED model
+SystemParam.c= 299792458;                                                   %[m/s] speed of light
+SystemParam.angularFreq=2*pi*SystemParam.c/(SystemParam.uvWavelength*10^-9);%[rad/s]
+%minimum photon energy at the wavelength of light before it changes "color"
+SystemParam.minPhotons=6.626*(10^-34)*(3*10^8/(SystemParam.uvWavelength*10^-9));%[J/#photon]    %minimum  photon energy in , assumign 1 photon/s
+SystemParam.intensityMin=SystemParam.minPhotons*10^15;%[uW]                 % ray will stop being followed if it drops below this value
+
+
+%% parameters for properties of medium a light ray is traveling through
+SystemParam.waterInterface = 0;                                             %is the fiber submerged? no? then it's in air
+SystemParam.waterStart=4.5*10^4;                                            %location at which the water starts (if water is there) 4.5cm [um]
+% % % SystemParam.isFiberLossy=1;     %if the fiber is considered lossy
+% % % if SystemParam.isFiberLossy==1
+SystemParam.n1 = 1.5+3.9319E-07*1i;                                        % Refractive index of the optical fiber
+% % % else%if not considered a lossy medium then it has no imaginary component
+% % %     SystemParam.n1 = 1.50;
+% % % end
+% % % SystemParam.isMediumLossy=1;%if the medium is considered lossy
+%attenuation constants of various mediums
+SystemParam.kAir = 3*10^-5;%[cm-1]                                          % Attenuation Constant of air 1/cm (assuming 20degC) https://www.ndt.net/article/ultragarsas/63-2008-no.1_03-jakevicius.pdf
+SystemParam.kWater =0.0293;%[cm-1]                                          % Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
+SystemParam.kCytop=2.5;%[cm-1]                                              % Attenuation constant of cytop polymer,technical info from cytop page says 5% absorbance over 200um -> 0.05/0.02cm=2.5 cm-1
+%calculate the imaginary parts of the RI for air and water from the refractive indexes and attenuation coefficients
+% % % if SystemParam.isMediumLossy==1
+i_nair=(SystemParam.kAir*10^2)*SystemParam.c/(2*SystemParam.angularFreq);
+i_nWater=(SystemParam.kWater*10^2)*SystemParam.c/(2*SystemParam.angularFreq);
+i_ncytop=(SystemParam.kCytop*10^2)*SystemParam.c/(2*SystemParam.angularFreq);
+
+SystemParam.n2 = 1.00029477+1i*i_nair;                                      %(Ciddor, 1996) RI of air w/in the coupling distance/separation distance/"gap" of LED and fiber face
+SystemParam.nWater = 1.353+1i*i_nWater;                                     % (Hale & Querry,1973) RI of water
+%include parameters for the nanoparticle coating factors
+SystemParam.n3=1.5; %RI of silica beads
+%include parameters for the polymer coating (cytop)
+SystemParam.n4=1.353+1i*i_ncytop;                                           %RI of cytop coating from https://www.agc-chemicals.com/file.jsp?id=jp/en/fluorine/products/cytop/download/pdf/CYTOP_EN_Brochure.pdf
+% % % else%if not considered a lossy medium then it has no imaginary component
+% % %     SystemParam.nWater = 1.353;                                       % (Hale & Querry,1973) RI of water
+% % %     SystemParam.n2 = 1.00029477;                                      % (Ciddor, 1996) RI of medium w/in the coupling distance/separation distance/"gap" of LED and fiber face
+% % % end
+SystemParam.nMetal=(1.325+2.3i);                                            % RI of SMA  connector, from https://pubs-aip-org.ezproxy1.lib.asu.edu/aip/jap/article/53/9/6340/308961/Optical-constants-and-spectral-selectivity-of
+
+%set external medium parameters depending on if we're in water or not
+if (SystemParam.waterInterface == 0)
+    SystemParam.n5 = SystemParam.n2;                                        % RI of air
+    SystemParam.k = SystemParam.kAir;%[cm-1]                                % Attenuation Constant of air at 250nm cm^-1 (assuming exceptionally clear air )https://thesis.library.caltech.edu/3249/1/Baum_wa_1950.pdf
+else
+    SystemParam.n5 = SystemParam.nWater;                                    % RI of water
+    SystemParam.k = SystemParam.kWater;%[cm-1]                              %Attenuation Constant of water 1/cm: https://www.sciencedirect.com/science/article/pii/1350448795002847
+end
+%absorption/attenuation coefficient ratio between rayleigh and absorption, Gerd Keiser. (2011). Optical Fiber Communications (4th ed.). McGraw-Hill Education.
+SystemParam.rayScatterCoeff=0.9;                                           %coefficient for what percentage of the loss is attributed to scattering vs absorption
+
+
+%% paramaters of the LED
+SystemParam.initialIntensity = 100*10^3;%[mW->uW]                           % LED intensity, 100 
+SystemParam.ledDiameter=1.1;%[mm]                                           % diameter of LED
+SystemParam.ledAngle=deg2rad(175);%[rad]                                    %angle distribution of light from LED
+SystemParam.q=0;                                                            %exponent for vertical DOM for LED from /science/article/pii/1350448795002847
+SystemParam.ledHalfAngle=deg2rad(70);%[rad]                                 %Angle from LED manufacturer's at which the power is <1/2 the max
+
+%% parameters of the LED-fiber coupling
+SystemParam.ledDistance = 1.0*10^3;%[mm->um]                                  %distance of LED from fiber in 
+SystemParam.SMA=1;                                                          %is there a SMA connector used to couple the fiber to the LED? 1 for yes, 0 for no
+SystemParam.smaFlushLength=1*10^4;%[cm->um]                                 %the length of the SMA connector that is flush-ish to the fiber surface is 1 cm long
+SystemParam.smaTotalLength=2.5*10^4;%[cm->um]                               %the total length of the SMA connector is 2.5 cm long
+SystemParam.smaDiameter=2.5*10^3;%[mm to um]                                %diameter of SMA connector 
+SystemParam.isSmaSealed=0;                                                  %is the SMA filled with cytop?
+SystemParam.smaFillLength=0;%2.5*10^4%[cm->um]                                       %depth the cytop fills the sma connector
+% % % SystemParam.metalAbsorbPct=0.0;         %absorption fom metal of the SMA connector
+
+%% parameters of the optical fiber
+SystemParam.fiberRadius = 500/2;%[um]                                       %radius of the fiber
+SystemParam.xLen = (12.5*10^4);%[cm->um]                                    %length along fiber
+% % % SystemParam.measDistance = 0;    %distance measured from the fiber
+SystemParam.numFibers=1;                                                    %number of fibers, 1, 4 , or 19
+
+%% parameters for changing fidelity of the simulation
+SystemParam.angleNum=25;                                                    %number of angles of led emission (must be less than numLedRays, below)
+SystemParam.numLedRays=SystemParam.angleNum^2;                              %total number of rays of emitted by LED
+SystemParam.scatterNum=13;%13                                                  %maximum number of rays produced by the scattering during end reflect
+SystemParam.frontScatter=1;                                                 %if there's a scatter cone considered in the front
+SystemParam.maxBounce=1;                                                    %maximum number of bounces to track b/w front and end of fiber
+SystemParam.contDx=10000;%[um]                                              %continuous transmission interval
+SystemParam.maxScatterAngle=0.3111;%[radians]                               %maximum scattering angle 5 degrees
+SystemParam.housingBounce=1;                                                %maximum number of times I'm willing to let the ray bounce between the SMA and the fiber
+SystemParam.angleDiv=2;                                                     %divisffions of angles to look at
+SystemParam.difTolerance=10^-10;                                            %tolerance of the difference
+SystemParam.division=1*10^4;                                                % sum all side emitted intensity every X cm along fiber
+
+%% use function to calculate the percent side scattered
+[SystemParam.scatterCoeff] = Scatter_Coeff(SystemParam);
+% % %possibly include SystemParam for point at which a ray is considered
+% % %horizontal or vertical
+% % %trying out different logic for stuff
+% % %SystemParam.dxordr=1;%select 0 if the logic is using dX, select 1 if the logic is using the whole travel distance
+
+
+% % %
+% % % friom https://www.content.molex.com/dxdam/literature/987650-8936.pdf
+% % %SystemParam.alpha_Cytop=(1000*10^-9);%db/um from cytop estimate in friday pres 091622
+% % %38.9 38.9 3968*10^-6;%197.55,98.33*10^-6;;%12.99*10^-6;%db/um%(1.64*10^-9)*(850/SystemParam.uvWavelength)^4;%db/um
+% % %SystemParam.rayleighCoeff=(1-10^(-SystemParam.rayleighAlpha*SystemParam.xLen/10));%coefficient used to find the amt of light scattered
+
+
+function SystemParam = setupSystemParams()
     SystemParam = SysParam;
 
 SystemParam.division=1*10^4;%2 cm division of the measurements of the figure
